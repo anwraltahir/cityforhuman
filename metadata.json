@@ -1,0 +1,6 @@
+{
+  "name": "مدن الإنسان – City for Human",
+  "description": "المجتمع الرقمي التفاعلي لكتاب «مدن الإنسان» للمؤلف عثمان الطيب. فضاء لرواد الفكر والتخطيط العمراني لمناقشة مستقبل مدننا الإنسانية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
