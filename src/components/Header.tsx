@@ -13,7 +13,6 @@ import {
   X,
   BookOpen,
   ChevronDown,
-  Sparkles,
 } from 'lucide-react';
 import { User } from '../types';
 import { store } from '../services/storage';
@@ -81,9 +80,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-[#FAF8F5]/95 backdrop-blur-md border-b border-[#E8E2D6] transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4 md:gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-2 md:gap-8">
         {/* Zone 1: Brand Wordmark */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => handleNavClick('home')}
             className="flex items-center gap-2.5 text-right group focus:outline-none"
@@ -91,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Official Car Line-Art Logo */}
             <div className="w-12 h-10 rounded-xl bg-[#C1E2B9]/50 border border-[#268F0C]/30 flex items-center justify-center p-1 shadow-2xs transition-transform group-hover:scale-105 overflow-hidden">
               <img
-                src="/src/assets/images/official_logo.png"
+                src="/images/official_logo.png"
                 alt="شعار مدن الإنسان"
                 className="w-full h-full object-contain"
               />
@@ -125,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Zone 3: Actions & Auth */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {currentUser ? (
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Notification Bell */}
@@ -208,43 +207,6 @@ export const Header: React.FC<HeaderProps> = ({
                       </button>
                     )}
 
-                    {/* Quick switch between initial accounts */}
-                    <div className="px-4 py-1.5 border-t border-[#F0EAE1] mt-1">
-                      <p className="text-[10px] text-stone-400 font-semibold mb-1 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-[#E84200]" />
-                        <span>تبديل الحساب السريع (للاختبار)</span>
-                      </p>
-                      <div className="flex flex-col gap-1">
-                        <button
-                          onClick={() => {
-                            store.login('osman7777@gmail.com');
-                            setUserDropdownOpen(false);
-                          }}
-                          className="text-[11px] text-right text-stone-600 hover:text-[#268F0C] py-0.5 truncate"
-                        >
-                          • عثمان الطيب (المدير: osman7777@gmail.com)
-                        </button>
-                        <button
-                          onClick={() => {
-                            store.login('sara@example.com');
-                            setUserDropdownOpen(false);
-                          }}
-                          className="text-[11px] text-right text-stone-600 hover:text-[#268F0C] py-0.5 truncate"
-                        >
-                          • د. سارة المنصور (مشرف)
-                        </button>
-                        <button
-                          onClick={() => {
-                            store.login('tariq@example.com');
-                            setUserDropdownOpen(false);
-                          }}
-                          className="text-[11px] text-right text-stone-600 hover:text-[#268F0C] py-0.5 truncate"
-                        >
-                          • م. طارق الخالدي (عضو)
-                        </button>
-                      </div>
-                    </div>
-
                     <div className="border-t border-[#F0EAE1] mt-1 pt-1">
                       <button
                         onClick={() => {
@@ -265,13 +227,13 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onOpenAuth('login')}
-                className="px-3.5 py-2 text-xs font-semibold text-stone-700 hover:text-stone-950 hover:bg-[#EFE9DF] rounded-lg transition-colors whitespace-nowrap"
+                className="hidden sm:block px-3.5 py-2 text-xs font-semibold text-stone-700 hover:text-stone-950 hover:bg-[#EFE9DF] rounded-lg transition-colors whitespace-nowrap"
               >
                 تسجيل الدخول
               </button>
               <button
                 onClick={() => onOpenAuth('register')}
-                className="px-4 py-2 text-xs font-bold text-white bg-[#268F0C] hover:bg-[#1f7309] rounded-lg shadow-sm transition-all whitespace-nowrap"
+                className="px-3 sm:px-4 py-2 text-xs font-bold text-white bg-[#268F0C] hover:bg-[#1f7309] rounded-lg shadow-sm transition-all whitespace-nowrap"
               >
                 إنشاء حساب
               </button>
@@ -305,6 +267,28 @@ export const Header: React.FC<HeaderProps> = ({
               {item.label}
             </button>
           ))}
+          {!currentUser && (
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#E8E2D6]">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenAuth('login');
+                }}
+                className="px-3 py-2.5 rounded-lg text-sm font-semibold text-stone-700 bg-white border border-[#DDD5C7]"
+              >
+                تسجيل الدخول
+              </button>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenAuth('register');
+                }}
+                className="px-3 py-2.5 rounded-lg text-sm font-bold text-white bg-[#268F0C]"
+              >
+                إنشاء حساب
+              </button>
+            </div>
+          )}
           {currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator') && (
             <button
               onClick={() => {

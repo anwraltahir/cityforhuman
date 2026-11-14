@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { BookOpen, MessageSquare, ArrowLeft, Compass, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { BookOpen, MessageSquare, ArrowLeft, Compass, Users, BellRing } from 'lucide-react';
+import { InterestModal } from './InterestModal';
 
 interface HeroSectionProps {
   onDiscoverBook: () => void;
@@ -17,6 +18,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onJoinDiscussion,
   onSelectChapter,
 }) => {
+  const [interestOpen, setInterestOpen] = useState(false);
   return (
     <section className="relative overflow-hidden pt-8 pb-16 lg:py-20 border-b border-[#E8E2D6] bg-gradient-to-b from-[#FAF8F5] via-[#FAF8F5] to-[#F3EDE3]/40">
       {/* Subtle architectural backdrop lines */}
@@ -105,8 +107,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 </div>
 
                 <div className="relative overflow-hidden rounded-xl bg-[#C1E2B9]/30">
+                  <span className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold text-white bg-[#E84200] rounded-full shadow-lg">
+                    <BellRing className="w-3.5 h-3.5" />
+                    قريباً في الأسواق
+                  </span>
                   <img
-                    src="/src/assets/images/book_cover_front.jpeg"
+                    src="/cover/front"
                     alt="غلاف كتاب مدن الإنسان - عثمان الطيب"
                     className="w-full h-auto rounded-xl shadow-md object-contain max-h-[460px] mx-auto"
                     referrerPolicy="no-referrer"
@@ -120,13 +126,28 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 </div>
               </div>
 
+              {/* Pre-launch call to action */}
+              <div className="relative mt-4 p-4 rounded-2xl bg-white border border-[#E5DECF] shadow-sm flex flex-col sm:flex-row items-center gap-3 sm:justify-between text-center sm:text-right">
+                <div>
+                  <p className="text-base font-extrabold text-stone-900">قريباً في الأسواق</p>
+                  <p className="text-xs text-stone-500 mt-0.5">كن أول من يعلم عند صدور الكتاب</p>
+                </div>
+                <button
+                  onClick={() => setInterestOpen(true)}
+                  className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white bg-[#E84200] hover:bg-[#C93900] rounded-xl shadow-md transition-colors cursor-pointer"
+                >
+                  <BellRing className="w-4 h-4" />
+                  سجّل اهتمامك
+                </button>
+              </div>
+
               {/* Quick Jump Ribbon to Popular Chapters */}
               <div className="mt-4 bg-white/80 backdrop-blur-xs p-3 rounded-xl border border-[#E5DECF] flex items-center justify-between gap-2 text-xs">
                 <span className="font-bold text-stone-700 flex items-center gap-1.5 shrink-0">
                   <Compass className="w-3.5 h-3.5 text-[#268F0C]" />
                   <span>ابرز الفصول:</span>
                 </span>
-                <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+                <div className="flex items-center gap-2 overflow-x-auto pb-0.5 min-w-0">
                   <button
                     onClick={() => onSelectChapter(8)}
                     className="hover:text-[#268F0C] font-semibold text-stone-600 whitespace-nowrap cursor-pointer"
@@ -153,6 +174,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
       </div>
+      {interestOpen && <InterestModal onClose={() => setInterestOpen(false)} />}
     </section>
   );
 };

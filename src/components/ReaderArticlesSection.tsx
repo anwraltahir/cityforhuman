@@ -80,7 +80,7 @@ export const ReaderArticlesSection: React.FC<ReaderArticlesSectionProps> = ({
                   {/* Article Cover */}
                   <div className="relative h-48 w-full overflow-hidden bg-stone-100">
                     <img
-                      src={article.coverImage || '/src/assets/images/urban_plaza_articles_1794401625775.jpg'}
+                      src={article.coverImage || '/images/urban_plaza_articles_1794401625775.jpg'}
                       alt={article.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       referrerPolicy="no-referrer"

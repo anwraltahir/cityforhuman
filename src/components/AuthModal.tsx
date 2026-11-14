@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { store } from '../services/storage';
 import { useToast } from './Toast';
-import { X, LogIn, UserPlus, Sparkles, Check, AlertCircle } from 'lucide-react';
+import { X, LogIn, UserPlus, Check, AlertCircle } from 'lucide-react';
 
 interface AuthModalProps {
   initialTab?: 'login' | 'register';
@@ -34,11 +34,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [regPasswordConfirm, setRegPasswordConfirm] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(true);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailOrUsername.trim()) {
       showToast('يرجى كتابة البريد الإلكتروني أو اسم المستخدم', 'error');
       return;
+    }
+    const target = store.findLoginUser(emailOrUsername);
+    if (target && (target.role === 'admin' || target.role === 'moderator')) {
+      try {
+        const r = await fetch('/api/admin/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok || !data.ok) {
+          showToast(data.error || 'كلمة المرور غير صحيحة', 'error');
+          return;
+        }
+        store.markAdminVerified(target.id, data.token);
+      } catch {
+        showToast('تعذر الاتصال بالخادم', 'error');
+        return;
+      }
     }
     const res = store.login(emailOrUsername);
     if (res.success) {
@@ -75,15 +94,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleQuickLogin = (emailTarget: string) => {
-    const res = store.login(emailTarget);
-    if (res.success) {
-      showToast(`تم الدخول بنجاح بحساب ${res.user?.name}`, 'success');
-      onSuccess();
-      onClose();
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
       <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E0D8CB] overflow-hidden text-right">
@@ -116,37 +126,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         </div>
 
-        {/* Quick Demo Switcher Strip */}
-        <div className="bg-[#FAF7F0] px-6 py-2.5 border-b border-[#EAE3D6]">
-          <p className="text-[11px] font-bold text-stone-600 flex items-center gap-1.5 mb-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#E84200]" />
-            <span>تجربة المنصة الفورية بصلاحيات مختلفة:</span>
-          </p>
-          <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('osman7777@gmail.com')}
-              className="text-[10px] font-bold px-2 py-1 bg-white border border-[#DDD5C7] rounded-lg text-stone-700 hover:border-[#268F0C] hover:text-[#268F0C] whitespace-nowrap cursor-pointer"
-            >
-              المؤلف عثمان (المدير)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('sara@example.com')}
-              className="text-[10px] font-bold px-2 py-1 bg-white border border-[#DDD5C7] rounded-lg text-stone-700 hover:border-[#268F0C] hover:text-[#268F0C] whitespace-nowrap cursor-pointer"
-            >
-              د. سارة (مشرف)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('tariq@example.com')}
-              className="text-[10px] font-bold px-2 py-1 bg-white border border-[#DDD5C7] rounded-lg text-stone-700 hover:border-[#268F0C] hover:text-[#268F0C] whitespace-nowrap cursor-pointer"
-            >
-              م. طارق (عضو)
-            </button>
-          </div>
-        </div>
-
         {/* Tab Content */}
         <div className="p-6">
           {activeTab === 'login' && (
@@ -159,7 +138,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   type="text"
                   value={emailOrUsername}
                   onChange={(e) => setEmailOrUsername(e.target.value)}
-                  placeholder="osman7777@gmail.com"
+                  placeholder="name@example.com"
                   className="w-full p-3 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:border-[#268F0C]"
                   required
                 />

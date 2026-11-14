@@ -28,7 +28,7 @@ export const NewArticleModal: React.FC<NewArticleModalProps> = ({ onClose, onSuc
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [excerpt, setExcerpt] = useState('');
   const [content, setContent] = useState('');
-  const [coverImage, setCoverImage] = useState('/src/assets/images/urban_plaza_articles_1794401625775.jpg');
+  const [coverImage, setCoverImage] = useState('/images/urban_plaza_articles_1794401625775.jpg');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

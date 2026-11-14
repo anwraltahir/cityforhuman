@@ -22,7 +22,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPrivacy, onOpe
             <div className="flex items-center gap-3">
               <div className="w-12 h-10 rounded-xl bg-[#C1E2B9] border border-[#268F0C]/40 flex items-center justify-center p-1 overflow-hidden shadow-xs">
                 <img
-                  src="/src/assets/images/official_logo.png"
+                  src="/images/official_logo.png"
                   alt="شعار مدن الإنسان"
                   className="w-full h-full object-contain"
                 />

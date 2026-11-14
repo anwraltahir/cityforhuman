@@ -19,7 +19,7 @@ export const AboutBookSection: React.FC<AboutBookSectionProps> = ({ onExploreCha
           <div className="lg:col-span-5 order-2 lg:order-1 space-y-4">
             <div className="relative rounded-2xl overflow-hidden border border-[#DDD5C7] shadow-lg bg-[#F4EFEA]">
               <img
-                src="/src/assets/images/book_cover_official.jpeg"
+                src="/cover/official"
                 alt="غلاف كتاب مدن الإنسان الكامل (الأمامي والخلفي)"
                 className="w-full h-auto object-cover"
                 referrerPolicy="no-referrer"

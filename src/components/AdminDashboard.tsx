@@ -3,10 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, Chapter, Discussion, Article, ReportItem, ModerationAction, SiteSettings } from '../types';
 import { store } from '../services/storage';
 import { useToast } from './Toast';
+import { CoverManager } from './CoverManager';
+import { InterestList } from './InterestList';
 import {
   X,
   LayoutDashboard,
@@ -30,6 +32,8 @@ import {
   RotateCcw,
   Edit,
   Save,
+  Menu,
+  BellRing,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -47,6 +51,7 @@ type TabType =
   | 'chapters'
   | 'reports'
   | 'settings'
+  | 'interest'
   | 'logs';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -57,6 +62,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  // Mobile: sidebar is a slide-in drawer; close it whenever a tab is picked
+  const [navOpen, setNavOpen] = useState(false);
+  useEffect(() => setNavOpen(false), [activeTab]);
 
   // Search states
   const [userSearch, setUserSearch] = useState('');
@@ -216,8 +224,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex bg-[#FAF8F5] text-right overflow-hidden animate-in fade-in">
-      {/* Sidebar Navigation */}
-      <aside className="w-64 bg-white border-l border-[#E5DDD0] flex flex-col justify-between shrink-0 shadow-sm">
+      {/* Mobile backdrop */}
+      {navOpen && (
+        <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setNavOpen(false)} />
+      )}
+
+      {/* Sidebar Navigation (drawer on mobile, static column on desktop) */}
+      <aside
+        className={`fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] overflow-y-auto transition-transform duration-200 md:static md:z-auto md:w-64 md:translate-x-0 bg-white border-l border-[#E5DDD0] flex flex-col justify-between shrink-0 shadow-sm ${
+          navOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
         <div>
           {/* Brand & Badge */}
           <div className="p-5 border-b border-[#F0EAE1]">
@@ -318,6 +335,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
 
             <button
+              onClick={() => setActiveTab('interest')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                activeTab === 'interest'
+                  ? 'bg-[#268F0C] text-white shadow-xs'
+                  : 'text-stone-600 hover:bg-[#FAF8F5] hover:text-stone-900'
+              }`}
+            >
+              <span>المهتمون بالكتاب</span>
+              <BellRing className="w-4 h-4" />
+            </button>
+            <button
               onClick={() => setActiveTab('logs')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                 activeTab === 'logs'
@@ -344,11 +372,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
+      <main className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
         {/* Top bar */}
-        <div className="h-16 bg-white border-b border-[#E5DDD0] px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-base font-bold text-stone-900">
+        <div className="h-14 md:h-16 bg-white border-b border-[#E5DDD0] px-3 md:px-6 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => setNavOpen(true)}
+              aria-label="القائمة"
+              className="md:hidden p-2 -mr-1 rounded-xl text-stone-700 hover:bg-[#FAF8F5] cursor-pointer"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <h1 className="text-sm md:text-base font-bold text-stone-900 truncate">
               {activeTab === 'overview' && 'لوحة المعلومات الرئيسية ومؤشرات الأداء'}
               {activeTab === 'users' && 'سجل وإدارة المستخدمين والصلاحيات'}
               {activeTab === 'discussions' && 'إدارة موضوعات النقاش والحوار'}
@@ -356,12 +391,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'chapters' && 'إدارة الفصول العشرة والمحتوى التوجيهي'}
               {activeTab === 'reports' && 'مركز البلاغات والمشاركات المخالفة'}
               {activeTab === 'settings' && 'إعدادات المنصة والبيانات التعريفية'}
+              {activeTab === 'interest' && 'المسجّلون للإعلام عند صدور الكتاب'}
               {activeTab === 'logs' && 'سجل الرقابة والإجراءات الإدارية'}
             </h1>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-stone-500 font-medium">المسؤول: {currentUser.name}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={onClose}
+              aria-label="الخروج من لوحة الإدارة"
+              className="md:hidden p-2 rounded-xl text-stone-600 hover:bg-[#FAF8F5] cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <span className="hidden sm:inline text-xs text-stone-500 font-medium">المسؤول: {currentUser.name}</span>
             <img
               src={currentUser.avatar}
               alt={currentUser.name}
@@ -371,7 +414,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         {/* Dynamic Tab Body */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8">
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-8">
@@ -480,8 +523,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <span className="text-xs text-stone-500">{filteredUsers.length} مستخدم</span>
               </div>
 
-              <div className="bg-white rounded-2xl border border-[#E5DDD0] overflow-hidden shadow-2xs">
-                <table className="w-full text-right text-xs">
+              <div className="bg-white rounded-2xl border border-[#E5DDD0] overflow-x-auto shadow-2xs">
+                <table className="w-full min-w-[640px] text-right text-xs">
                   <thead className="bg-[#FAF8F5] border-b border-[#E5DDD0] text-stone-600">
                     <tr>
                       <th className="p-3.5 font-bold">المستخدم</th>
@@ -883,7 +926,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* TAB 7: SITE SETTINGS */}
           {activeTab === 'settings' && (
-            <form onSubmit={handleSaveSettings} className="max-w-2xl bg-white p-6 rounded-3xl border border-[#E5DDD0] space-y-4">
+            <div className="space-y-4">
+              <CoverManager />
+            <form onSubmit={handleSaveSettings} className="max-w-2xl bg-white p-4 sm:p-6 rounded-3xl border border-[#E5DDD0] space-y-4">
               <div>
                 <label className="block text-xs font-bold text-stone-700 mb-1">اسم الكتاب</label>
                 <input
@@ -951,9 +996,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 حفظ التغييرات العامة
               </button>
             </form>
+            </div>
           )}
 
           {/* TAB 8: AUDIT LOGS */}
+          {activeTab === 'interest' && <InterestList />}
+
           {activeTab === 'logs' && (
             <div className="bg-white rounded-2xl border border-[#E5DDD0] p-6 shadow-2xs space-y-3">
               <h3 className="text-sm font-bold text-stone-900 pb-3 border-b border-[#F0EAE1]">

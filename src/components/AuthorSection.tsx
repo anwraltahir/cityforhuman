@@ -18,7 +18,7 @@ export const AuthorSection: React.FC = () => {
               <div className="absolute -inset-3 bg-[#C1E2B9]/30 rounded-3xl transform rotate-1 filter blur-xs" />
               <div className="relative rounded-2xl overflow-hidden border border-[#D5CCBE] shadow-xl bg-white">
                 <img
-                  src="/src/assets/images/author_osman_official.jpeg"
+                  src="/images/author_osman_official.jpeg"
                   alt="المهندس والباحث عثمان الطيب - مؤلف كتاب مدن الإنسان"
                   className="w-full h-auto object-cover max-h-[440px]"
                   referrerPolicy="no-referrer"

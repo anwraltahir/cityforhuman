@@ -24,6 +24,11 @@ import {
   INITIAL_SITE_SETTINGS,
 } from '../data/initialData';
 
+const REMOVED_DEMO_USERS = ['user_sara_urban', 'user_tariq_arch'];
+const ADMIN_VERIFIED_KEY = 'cfh_admin_verified';
+const ADMIN_TOKEN_KEY = 'cfh_admin_token';
+const isPrivileged = (u: User) => u.role === 'admin' || u.role === 'moderator';
+
 const STORAGE_KEYS = {
   CURRENT_USER: 'cfh_current_user',
   USERS: 'cfh_users',
@@ -85,24 +90,51 @@ class DataStore {
       ]);
       this.siteSettings = this.loadFromStorage(STORAGE_KEYS.SITE_SETTINGS, INITIAL_SITE_SETTINGS);
 
-      // Default current user to Osman (Admin) for instant exploration, or saved user
+      // Purge removed demo accounts (and their content) from data saved by earlier versions
+      const gone = (id: string) => REMOVED_DEMO_USERS.includes(id);
+      const keepIds = (ids?: string[]) => (ids || []).filter((id) => !gone(id));
+      if (this.users.some((u) => gone(u.id))) {
+        this.users = this.users.filter((u) => !gone(u.id));
+        this.discussions = this.discussions.filter((d) => !gone(d.authorId));
+        const discIds = new Set(this.discussions.map((d) => d.id));
+        this.comments = this.comments.filter((c) => !gone(c.authorId) && discIds.has(c.discussionId));
+        this.articles = this.articles.filter((a) => !gone(a.authorId));
+        this.discussions = this.discussions.map((d) => ({
+          ...d,
+          likes: keepIds(d.likes),
+          followers: keepIds(d.followers),
+          commentsCount: this.comments.filter((c) => c.discussionId === d.id).length,
+        }));
+        this.comments = this.comments.map((c) => ({ ...c, likes: keepIds(c.likes) }));
+        this.saveToStorage(STORAGE_KEYS.USERS, this.users);
+        this.saveToStorage(STORAGE_KEYS.DISCUSSIONS, this.discussions);
+        this.saveToStorage(STORAGE_KEYS.COMMENTS, this.comments);
+        this.saveToStorage(STORAGE_KEYS.ARTICLES, this.articles);
+      }
+
+      // Restore saved user (visitors start signed out)
       const savedUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      if (savedUser) {
-        this.currentUser = JSON.parse(savedUser);
+      if (savedUser && !REMOVED_DEMO_USERS.some((id) => savedUser.includes(`"id":"${id}"`))) {
+        this.currentUser = JSON.parse(savedUser.split('/src/assets/images/').join('/images/'));
       } else {
-        this.currentUser = this.users[0] || null;
+        this.currentUser = null; // visitors start signed out
+      }
+      // Privileged sessions must have passed the server password check
+      if (this.currentUser && isPrivileged(this.currentUser) && localStorage.getItem(ADMIN_VERIFIED_KEY) !== this.currentUser.id) {
+        this.currentUser = null;
+        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
       }
 
       // Ensure author Osman's avatar, bio, and email are synchronized with official asset
       const osman = this.users.find((u) => u.id === 'user_author_osman');
       if (osman) {
-        osman.avatar = '/src/assets/images/author_osman_square.jpeg';
+        osman.avatar = '/images/author_osman_square.jpeg';
         osman.bio = INITIAL_USERS[0].bio;
         osman.email = 'osman7777@gmail.com';
       }
       this.siteSettings.contactEmail = 'osman7777@gmail.com';
       if (this.currentUser && this.currentUser.id === 'user_author_osman') {
-        this.currentUser.avatar = '/src/assets/images/author_osman_square.jpeg';
+        this.currentUser.avatar = '/images/author_osman_square.jpeg';
         this.currentUser.bio = INITIAL_USERS[0].bio;
         this.currentUser.email = 'osman7777@gmail.com';
       }
@@ -116,14 +148,15 @@ class DataStore {
       this.comments = INITIAL_COMMENTS;
       this.articles = INITIAL_ARTICLES;
       this.siteSettings = INITIAL_SITE_SETTINGS;
-      this.currentUser = INITIAL_USERS[0];
+      this.currentUser = null;
     }
   }
 
   private loadFromStorage<T>(key: string, fallback: T): T {
     try {
       const item = localStorage.getItem(key);
-      if (item) return JSON.parse(item);
+      // Migrate image paths saved before images moved to /public/images
+      if (item) return JSON.parse(item.split('/src/assets/images/').join('/images/'));
     } catch {
       // Fallback
     }
@@ -207,6 +240,28 @@ class DataStore {
     return { success: true, user: newUser };
   }
 
+  public findLoginUser(emailOrUsername: string): User | undefined {
+    const trimmed = emailOrUsername.trim().toLowerCase();
+    return this.users.find(
+      (u) =>
+        u.email.toLowerCase() === trimmed ||
+        u.username.toLowerCase() === trimmed ||
+        (u.id === 'user_author_osman' &&
+          (trimmed === 'osman7777@gmail.com' || trimmed === 'admin@cityforhuman.com'))
+    );
+  }
+
+  /** Call only after /api/admin/verify succeeded for this user. */
+  public markAdminVerified(userId: string, token?: string) {
+    localStorage.setItem(ADMIN_VERIFIED_KEY, userId);
+    if (token) localStorage.setItem(ADMIN_TOKEN_KEY, token);
+  }
+
+  /** Signed server token for admin API calls (cover upload etc.). */
+  public getAdminToken(): string {
+    return localStorage.getItem(ADMIN_TOKEN_KEY) || '';
+  }
+
   public login(emailOrUsername: string): { success: boolean; user?: User; error?: string } {
     const trimmed = emailOrUsername.trim().toLowerCase();
     const user = this.users.find(
@@ -225,11 +280,17 @@ class DataStore {
       return { success: false, error: 'هذا الحساب معطل حالياً من قِبل إدارة المنصة' };
     }
 
+    if (isPrivileged(user) && localStorage.getItem(ADMIN_VERIFIED_KEY) !== user.id) {
+      return { success: false, error: 'هذا الحساب يتطلب كلمة مرور الإدارة' };
+    }
+
     this.setCurrentUser(user);
     return { success: true, user };
   }
 
   public logout() {
+    localStorage.removeItem(ADMIN_VERIFIED_KEY);
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
     this.setCurrentUser(null);
   }
 
@@ -706,7 +767,7 @@ class DataStore {
       category: params.category,
       excerpt: params.excerpt.trim(),
       content: params.content.trim(),
-      coverImage: params.coverImage || '/src/assets/images/urban_plaza_articles_1794401625775.jpg',
+      coverImage: params.coverImage || '/images/urban_plaza_articles_1794401625775.jpg',
       authorId: this.currentUser.id,
       authorName: this.currentUser.name,
       authorAvatar: this.currentUser.avatar,
