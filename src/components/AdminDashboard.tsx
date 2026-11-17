@@ -176,8 +176,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setEditChapterDesc(ch.description);
   };
 
-  const handleSaveChapter = (chId: number) => {
-    store.updateChapter(
+  const handleSaveChapter = async (chId: number) => {
+    const ok = await store.updateChapter(
       chId,
       {
         title: editChapterTitle,
@@ -187,7 +187,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       currentUser.name
     );
     setEditingChapterId(null);
-    showToast('تم تحديث بيانات الفصل بنجاح', 'success');
+    if (ok) showToast('تم تحديث بيانات الفصل بنجاح', 'success');
+    else showToast('لم يُحفظ التعديل على الخادم، سجّل الخروج ثم ادخل مجدداً وأعد المحاولة', 'error');
   };
 
   // Report Resolution
@@ -203,10 +204,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   // Site Settings Save
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    store.updateSiteSettings(settings, currentUser.name);
-    showToast('تم حفظ إعدادات المنصة بنجاح', 'success');
+    const ok = await store.updateSiteSettings(settings, currentUser.name);
+    if (ok) showToast('تم حفظ إعدادات المنصة بنجاح', 'success');
+    else showToast('لم يُحفظ التعديل على الخادم، سجّل الخروج ثم ادخل مجدداً وأعد المحاولة', 'error');
   };
 
   const formatDate = (iso: string) => {

@@ -178,6 +178,46 @@ async function startServer() {
     res.json({ ok: true });
   });
 
+  // ---- Admin-edited site content (settings + chapter texts), shared by every visitor.
+  // Stored in ./data/content.json so edits made on one device show on all devices.
+  const CONTENT_FILE = path.join(DATA_DIR, 'content.json');
+  type Content = { settings?: Record<string, unknown>; chapters?: Record<string, Record<string, unknown>> };
+  const readContent = (): Content => {
+    try { return JSON.parse(fs.readFileSync(CONTENT_FILE, 'utf8')); } catch { return {}; }
+  };
+  const SETTINGS_FIELDS = ['bookTitle', 'bookSubtitle', 'authorName', 'authorBio', 'communityIntro', 'officialDomain', 'contactEmail'];
+  const CHAPTER_FIELDS = ['title', 'subtitle', 'description', 'keyThemes', 'order', 'isActive'];
+  const pick = (obj: unknown, fields: string[]) => {
+    const out: Record<string, unknown> = {};
+    if (obj && typeof obj === 'object') {
+      for (const f of fields) if (f in obj) out[f] = (obj as Record<string, unknown>)[f];
+    }
+    return out;
+  };
+
+  app.get('/api/content', (_req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(readContent());
+  });
+
+  app.put('/api/admin/content', requireAdmin, (req: Request, res: Response) => {
+    const content = readContent();
+    if (req.body?.settings) {
+      content.settings = { ...content.settings, ...pick(req.body.settings, SETTINGS_FIELDS) };
+    }
+    if (req.body?.chapters && typeof req.body.chapters === 'object') {
+      content.chapters = content.chapters || {};
+      for (const [id, data] of Object.entries(req.body.chapters)) {
+        if (!/^\d+$/.test(id)) continue;
+        content.chapters[id] = { ...content.chapters[id], ...pick(data, CHAPTER_FIELDS) };
+      }
+    }
+    const tmp = `${CONTENT_FILE}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(content, null, 1));
+    fs.renameSync(tmp, CONTENT_FILE);
+    res.json({ ok: true });
+  });
+
   // REST API status endpoints for the community platform
   app.get('/api/info', (_req: Request, res: Response) => {
     res.json({
@@ -197,8 +237,15 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
+    app.use(express.static(path.resolve(__dirname, 'dist'), {
+      setHeaders: (res, file) => {
+        // HTML must be revalidated so phones pick up new deploys; hashed assets can cache forever
+        if (file.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+        else if (file.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      },
+    }));
     app.get('*', (_req: Request, res: Response) => {
+      res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
     });
   }

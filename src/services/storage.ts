@@ -57,6 +57,49 @@ class DataStore {
 
   constructor() {
     this.init();
+    this.loadSharedContent();
+  }
+
+  /** Pull admin-edited content (settings + chapter texts) from the server, shared by all devices. */
+  private async loadSharedContent() {
+    try {
+      const r = await fetch('/api/content', { cache: 'no-store' });
+      if (!r.ok) return;
+      const content: { settings?: Partial<SiteSettings>; chapters?: Record<string, Partial<Chapter>> } = await r.json();
+      const hasServerContent = !!content.settings || !!content.chapters;
+      if (content.settings) {
+        this.siteSettings = { ...this.siteSettings, ...content.settings };
+        this.saveToStorage(STORAGE_KEYS.SITE_SETTINGS, this.siteSettings);
+      }
+      if (content.chapters) {
+        this.chapters = this.chapters.map((ch) => ({ ...ch, ...(content.chapters![String(ch.id)] || {}) }));
+        this.saveToStorage(STORAGE_KEYS.CHAPTERS, this.chapters);
+      }
+      // One-time migration: if the server has nothing yet and this browser holds the admin's
+      // earlier edits, upload them so other devices see them too.
+      if (!hasServerContent && this.getAdminToken()) {
+        const chapters: Record<string, Partial<Chapter>> = {};
+        this.chapters.forEach((ch) => {
+          chapters[ch.id] = { title: ch.title, subtitle: ch.subtitle, description: ch.description, keyThemes: ch.keyThemes, order: ch.order, isActive: ch.isActive };
+        });
+        await this.pushSharedContent({ settings: this.siteSettings, chapters });
+      }
+    } catch {
+      // Offline: keep locally cached content
+    }
+  }
+
+  private async pushSharedContent(body: { settings?: Partial<SiteSettings>; chapters?: Record<string, Partial<Chapter>> }): Promise<boolean> {
+    try {
+      const r = await fetch('/api/admin/content', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.getAdminToken()}` },
+        body: JSON.stringify(body),
+      });
+      return r.ok;
+    } catch {
+      return false;
+    }
   }
 
   private init() {
@@ -348,11 +391,12 @@ class DataStore {
     return this.chapters.find((c) => c.id === id);
   }
 
-  public updateChapter(id: number, data: Partial<Chapter>, moderatorName: string) {
+  public updateChapter(id: number, data: Partial<Chapter>, moderatorName: string): Promise<boolean> {
     const chapter = this.chapters.find((c) => c.id === id);
-    if (!chapter) return;
+    if (!chapter) return Promise.resolve(false);
     Object.assign(chapter, data);
     this.saveToStorage(STORAGE_KEYS.CHAPTERS, this.chapters);
+    const saved = this.pushSharedContent({ chapters: { [id]: data } });
 
     this.addModerationLog({
       moderatorName,
@@ -360,6 +404,7 @@ class DataStore {
       target: chapter.title,
       details: `تم تحديث محتوى أو ترتيب الفصل رقم ${chapter.id}`,
     });
+    return saved;
   }
 
   // --- Discussions ---
@@ -961,9 +1006,10 @@ class DataStore {
     return { ...this.siteSettings };
   }
 
-  public updateSiteSettings(settings: Partial<SiteSettings>, moderatorName: string) {
+  public updateSiteSettings(settings: Partial<SiteSettings>, moderatorName: string): Promise<boolean> {
     this.siteSettings = { ...this.siteSettings, ...settings };
     this.saveToStorage(STORAGE_KEYS.SITE_SETTINGS, this.siteSettings);
+    const saved = this.pushSharedContent({ settings });
 
     this.addModerationLog({
       moderatorName,
@@ -971,6 +1017,7 @@ class DataStore {
       target: 'إعدادات المنصة',
       details: 'تم تعديل البيانات التعريفية أو نصوص الصفحة الرئيسية',
     });
+    return saved;
   }
 }
 
