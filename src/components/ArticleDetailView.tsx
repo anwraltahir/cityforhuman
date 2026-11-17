@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { store } from '../services/storage';
 import { Article } from '../types';
 import { ArrowRight, Calendar, Eye, Share2, User, Newspaper, BookOpen } from 'lucide-react';
 
@@ -18,6 +19,10 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({
   onBack,
   onOpenShare,
 }) => {
+  useEffect(() => {
+    store.incrementArticleViews(article.id);
+  }, [article.id]);
+
   const formatDate = (iso?: string) => {
     if (!iso) return '';
     try {

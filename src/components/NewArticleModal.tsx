@@ -30,27 +30,23 @@ export const NewArticleModal: React.FC<NewArticleModalProps> = ({ onClose, onSuc
   const [content, setContent] = useState('');
   const [coverImage, setCoverImage] = useState('/images/urban_plaza_articles_1794401625775.jpg');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !excerpt.trim() || !content.trim()) {
       showToast('يرجى استكمال جميع الحقول المطلوبة', 'error');
       return;
     }
 
-    const art = store.submitArticle({
-      title,
-      category,
-      excerpt,
-      content,
-      coverImage,
-    });
-
-    if (art) {
-      showToast('تم إرسال مقالك للمراجعة بنجاح! سيتم إشعارك فور اعتماده.', 'success');
+    const res = await store.submitArticle({ title, category, excerpt, content, coverImage });
+    if (res.ok) {
+      showToast(
+        res.result?.status === 'approved' ? 'تم نشر المقال مباشرة.' : 'تم إرسال مقالك للمراجعة بنجاح! سيتم إشعارك فور اعتماده.',
+        'success'
+      );
       onSuccess();
       onClose();
     } else {
-      showToast('يرجى تسجيل الدخول أولاً لتقديم مقال', 'error');
+      showToast(res.error || 'تعذر إرسال المقال', 'error');
     }
   };
 

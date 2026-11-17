@@ -34,32 +34,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [regPasswordConfirm, setRegPasswordConfirm] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(true);
 
+  const [busy, setBusy] = useState(false);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!emailOrUsername.trim()) {
-      showToast('يرجى كتابة البريد الإلكتروني أو اسم المستخدم', 'error');
+    if (!emailOrUsername.trim() || !password) {
+      showToast('يرجى كتابة البريد الإلكتروني أو اسم المستخدم وكلمة المرور', 'error');
       return;
     }
-    const target = store.findLoginUser(emailOrUsername);
-    if (target && (target.role === 'admin' || target.role === 'moderator')) {
-      try {
-        const r = await fetch('/api/admin/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password }),
-        });
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok || !data.ok) {
-          showToast(data.error || 'كلمة المرور غير صحيحة', 'error');
-          return;
-        }
-        store.markAdminVerified(target.id, data.token);
-      } catch {
-        showToast('تعذر الاتصال بالخادم', 'error');
-        return;
-      }
-    }
-    const res = store.login(emailOrUsername);
+    setBusy(true);
+    const res = await store.login(emailOrUsername, password);
+    setBusy(false);
     if (res.success) {
       showToast(`أهلاً بك مجدداً يا ${res.user?.name}!`, 'success');
       onSuccess();
@@ -69,10 +54,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !username.trim() || !email.trim() || !regPassword) {
       showToast('يرجى ملء كافة الحقول الإلزامية', 'error');
+      return;
+    }
+    if (regPassword.length < 8) {
+      showToast('كلمة المرور يجب ألا تقل عن 8 أحرف', 'error');
       return;
     }
     if (regPassword !== regPasswordConfirm) {
@@ -84,7 +73,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    const res = store.register(name, username, email);
+    setBusy(true);
+    const res = await store.register(name, username, email, regPassword);
+    setBusy(false);
     if (res.success) {
       showToast(`تم إنشاء حسابك بنجاح! مرحباً بك في مجتمع مدن الإنسان`, 'success');
       onSuccess();
@@ -167,6 +158,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
               <button
                 type="submit"
+                disabled={busy}
                 className="w-full py-3 bg-[#268F0C] hover:bg-[#1f7309] text-white font-bold text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
                 <LogIn className="w-4 h-4 text-[#C1E2B9]" />
@@ -252,6 +244,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
               <button
                 type="submit"
+                disabled={busy}
                 className="w-full py-3 bg-[#268F0C] hover:bg-[#1f7309] text-white font-bold text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
                 <UserPlus className="w-4 h-4 text-[#C1E2B9]" />
@@ -262,27 +255,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {activeTab === 'forgot' && (
             <div className="space-y-4">
-              <p className="text-xs text-stone-600 leading-relaxed">
-                أدخل بريدك الإلكتروني المسجل وسنرسل لك رابط استعادة وتعيين كلمة المرور.
+              <p className="text-sm text-stone-600 leading-relaxed">
+                لإعادة تعيين كلمة المرور، راسل إدارة المنصة من بريدك المسجل وسنرسل لك كلمة مرور مؤقتة.
               </p>
-              <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">البريد الإلكتروني</label>
-                <input
-                  type="email"
-                  placeholder="name@example.com"
-                  className="w-full p-3 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:border-[#268F0C]"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  showToast('تم إرسال تعليمات الاستعادة إلى بريدك الإلكتروني', 'success');
-                  setActiveTab('login');
-                }}
-                className="w-full py-2.5 bg-[#268F0C] text-white font-bold text-xs sm:text-sm rounded-xl"
+              <a
+                href={`mailto:${store.getSiteSettings().contactEmail}?subject=${encodeURIComponent('إعادة تعيين كلمة المرور - مدن الإنسان')}`}
+                className="block w-full py-2.5 bg-[#268F0C] text-white text-center font-bold text-xs sm:text-sm rounded-xl"
               >
-                إرسال رابط الاستعادة
-              </button>
+                مراسلة الإدارة
+              </a>
               <button
                 type="button"
                 onClick={() => setActiveTab('login')}

@@ -99,72 +99,69 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
   const isLikedByMe = currentUser ? discussion.likes.includes(currentUser.id) : false;
   const isFollowedByMe = currentUser ? discussion.followers.includes(currentUser.id) : false;
 
-  const handleToggleLike = () => {
+  const handleToggleLike = async () => {
     if (!currentUser) {
       onOpenAuth();
       return;
     }
-    const liked = store.toggleLikeDiscussion(discussion.id);
-    showToast(liked ? 'تم تسجيل إعجابك بالنقاش' : 'تم إلغاء الإعجاب', 'success');
+    const res = await store.toggleLikeDiscussion(discussion.id);
+    if (res.ok) showToast(res.result ? 'تم تسجيل إعجابك بالنقاش' : 'تم إلغاء الإعجاب', 'success');
+    else showToast(res.error || 'تعذر تسجيل الإعجاب', 'error');
   };
 
-  const handleToggleFollow = () => {
+  const handleToggleFollow = async () => {
     if (!currentUser) {
       onOpenAuth();
       return;
     }
-    const followed = store.toggleFollowDiscussion(discussion.id);
-    showToast(
-      followed ? 'أنت الآن تتابع هذا النقاش وستصلك إشعارات بالردود الجديدة' : 'تم إلغاء متابعة النقاش',
-      'info'
-    );
+    const res = await store.toggleFollowDiscussion(discussion.id);
+    if (res.ok) {
+      showToast(res.result ? 'أنت الآن تتابع هذا النقاش وستصلك إشعارات بالردود الجديدة' : 'تم إلغاء متابعة النقاش', 'info');
+    } else showToast(res.error || 'تعذر تحديث المتابعة', 'error');
   };
 
-  const handleAddComment = (e: React.FormEvent) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
       onOpenAuth();
       return;
     }
     if (!newCommentContent.trim()) return;
-
-    store.addComment({
-      discussionId: discussion.id,
-      content: newCommentContent,
-    });
-    setNewCommentContent('');
-    showToast('تمت إضافة مشاركتك بنجاح', 'success');
+    const res = await store.addComment({ discussionId: discussion.id, content: newCommentContent });
+    if (res.ok) {
+      setNewCommentContent('');
+      showToast('تمت إضافة مشاركتك بنجاح', 'success');
+    } else showToast(res.error || 'تعذر إرسال التعليق', 'error');
   };
 
-  const handleAddReply = (parentId: string) => {
+  const handleAddReply = async (parentId: string) => {
     if (!currentUser) {
       onOpenAuth();
       return;
     }
     if (!replyContent.trim()) return;
-
-    store.addComment({
-      discussionId: discussion.id,
-      parentId,
-      content: replyContent,
-    });
-    setReplyingToId(null);
-    setReplyContent('');
-    showToast('تم إرسال ردك بنجاح', 'success');
+    const res = await store.addComment({ discussionId: discussion.id, parentId, content: replyContent });
+    if (res.ok) {
+      setReplyingToId(null);
+      setReplyContent('');
+      showToast('تم إرسال ردك بنجاح', 'success');
+    } else showToast(res.error || 'تعذر إرسال الرد', 'error');
   };
 
-  const handleSaveEdit = (commentId: string) => {
+  const handleSaveEdit = async (commentId: string) => {
     if (!editingContent.trim()) return;
-    store.editComment(commentId, editingContent);
-    setEditingCommentId(null);
-    showToast('تم تعديل التعليق', 'success');
+    const res = await store.editComment(commentId, editingContent);
+    if (res.ok) {
+      setEditingCommentId(null);
+      showToast('تم تعديل التعليق', 'success');
+    } else showToast(res.error || 'تعذر تعديل التعليق', 'error');
   };
 
-  const handleDeleteComment = (commentId: string) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا التعليق؟')) {
-      store.deleteComment(commentId, currentUser?.name);
-      showToast('تم حذف التعليق', 'info');
-    }
+  const handleDeleteComment = async (commentId: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
+    const res = await store.deleteComment(commentId);
+    if (res.ok) showToast('تم حذف التعليق', 'info');
+    else showToast(res.error || 'تعذر حذف التعليق', 'error');
   };
 
   const formatDate = (iso: string) => {
@@ -242,7 +239,9 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
                   onOpenAuth();
                   return;
                 }
-                store.toggleLikeComment(comment.id);
+                store.toggleLikeComment(comment.id).then((res) => {
+                  if (!res.ok) showToast(res.error || 'تعذر تسجيل الإعجاب', 'error');
+                });
               }}
               className={`p-1.5 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
                 isCommentLiked ? 'text-[#E84200] font-bold' : 'text-stone-500 hover:text-[#E84200]'

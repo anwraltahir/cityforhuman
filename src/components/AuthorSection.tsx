@@ -5,8 +5,14 @@
 
 import React from 'react';
 import { UserCheck, BookOpen, Quote, Globe, Mail } from 'lucide-react';
+import { store } from '../services/storage';
+import { INITIAL_SITE_SETTINGS } from '../data/initialData';
 
 export const AuthorSection: React.FC = () => {
+  const settings = store.getSiteSettings();
+  // Keep the formatted default text until the admin edits the bio
+  const customBio = settings.authorBio.trim() !== INITIAL_SITE_SETTINGS.authorBio.trim();
+
   return (
     <section id="author" className="py-16 lg:py-24 border-b border-[#E8E2D6] bg-[#FAF8F5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,12 +60,18 @@ export const AuthorSection: React.FC = () => {
             </div>
 
             <div className="space-y-4 text-stone-700 text-sm sm:text-base leading-relaxed">
+              {customBio ? (
+                <p className="font-semibold text-stone-900 whitespace-pre-line">{settings.authorBio}</p>
+              ) : (
+                <>
               <p className="font-semibold text-stone-900">
                 عثمان الطيب مهندس مدني، حصل على ماجستير الهندسة المدنية من جامعة برادلي بالولايات المتحدة الأمريكية، وعمل في العديد من المشاريع المرموقة في أمريكا وقطر والسودان.
               </p>
               <p>
                 تعرّف على رواد حركة العمران الجديد (New Urbanism) في أمريكا، أمثال <strong className="text-stone-900">أندريس دواني</strong> و<strong className="text-stone-900">جيف سبيك</strong> و<strong className="text-stone-900">فيكتور دوفر</strong>، وعاين عن كثب الأثر العظيم الذي أحدثوه في عمران مدن أمريكا، وسعى من خلال هذا الكتاب وهذا المجتمع لنقل وتوطين هذه المفاهيم في العالم العربي.
               </p>
+                </>
+              )}
               <p className="text-xs text-stone-500 italic border-t border-[#F0EAE1] pt-3">
                 «الكتاب ممتع وراقٍ ويحمل حساً مرهفاً لفنان وأديب وليس مهندساً مدنياً فقط، كما أثرى المؤلف اللغة العربية بمفردات جميلة وغائبة.» — د. حسام الدين إسماعيل
               </p>
@@ -78,11 +90,11 @@ export const AuthorSection: React.FC = () => {
               </a>
 
               <a
-                href="mailto:osman7777@gmail.com"
+                href={`mailto:${settings.contactEmail}`}
                 className="flex items-center gap-1.5 hover:text-[#268F0C] transition-colors"
               >
                 <Mail className="w-4 h-4 text-[#E84200]" />
-                <span className="font-mono text-xs">osman7777@gmail.com</span>
+                <span className="font-mono text-xs">{settings.contactEmail}</span>
               </a>
             </div>
           </div>

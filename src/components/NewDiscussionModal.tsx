@@ -30,7 +30,7 @@ export const NewDiscussionModal: React.FC<NewDiscussionModalProps> = ({
   const [showImageInput, setShowImageInput] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) {
       showToast('يرجى كتابة عنوان واضح ونص للنقاش', 'error');
@@ -38,19 +38,19 @@ export const NewDiscussionModal: React.FC<NewDiscussionModalProps> = ({
     }
 
     setIsSubmitting(true);
-    const newDisc = store.createDiscussion({
+    const res = await store.createDiscussion({
       chapterId,
       title,
       content,
       imageUrl: imageUrl.trim() || undefined,
     });
 
-    if (newDisc) {
+    if (res.ok && res.result) {
       showToast('تم نشر موضوع النقاش بنجاح!', 'success');
-      onSuccess(newDisc.id);
+      onSuccess(res.result.id);
       onClose();
     } else {
-      showToast('حدث خطأ أثناء النشر، يرجى تسجيل الدخول أولاً', 'error');
+      showToast(res.error || 'حدث خطأ أثناء النشر', 'error');
       setIsSubmitting(false);
     }
   };

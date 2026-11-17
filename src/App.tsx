@@ -40,6 +40,7 @@ function MainApp() {
   const [chapters, setChapters] = useState<Chapter[]>(() => store.getChapters());
   const [discussions, setDiscussions] = useState<Discussion[]>(() => store.getDiscussions());
   const [articles, setArticles] = useState<Article[]>(() => store.getArticles());
+  const [ready, setReady] = useState(() => store.isReady());
 
   // Views & Routing State
   const [viewMode, setViewMode] = useState<'main' | 'chapter_detail' | 'discussion_detail' | 'article_detail'>('main');
@@ -75,6 +76,7 @@ function MainApp() {
       setChapters(store.getChapters());
       setDiscussions(store.getDiscussions());
       setArticles(store.getArticles());
+      setReady(store.isReady());
     };
     const unsub = store.subscribe(syncData);
     return () => unsub();
@@ -154,6 +156,17 @@ function MainApp() {
 
   const selectedChapter = selectedChapterId ? chapters.find((c) => c.id === selectedChapterId) : undefined;
   const selectedArticle = selectedArticleId ? articles.find((a) => a.id === selectedArticleId) : undefined;
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF8F5]" dir="rtl">
+        <div className="flex flex-col items-center gap-3 text-stone-500">
+          <div className="w-9 h-9 border-[3px] border-[#C1E2B9] border-t-[#268F0C] rounded-full animate-spin" />
+          <span className="text-sm font-semibold">جارٍ تحميل مدن الإنسان…</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-stone-900 selection:bg-[#C1E2B9] selection:text-[#194b10]">

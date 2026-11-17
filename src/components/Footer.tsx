@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { BookOpen, Globe, Mail, Heart, ShieldCheck, FileText } from 'lucide-react';
+import { store } from '../services/storage';
 
 interface FooterProps {
   onNavigate: (section: string) => void;
@@ -143,11 +144,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPrivacy, onOpe
               </li>
               <li className="pt-2">
                 <a
-                  href="mailto:osman7777@gmail.com"
+                  href={`mailto:${store.getSiteSettings().contactEmail}`}
                   className="flex items-center gap-1.5 text-stone-400 hover:text-white transition-colors"
                 >
                   <Mail className="w-3.5 h-3.5 text-[#E84200]" />
-                  <span className="font-mono text-xs">osman7777@gmail.com</span>
+                  <span className="font-mono text-xs">{store.getSiteSettings().contactEmail}</span>
                 </a>
               </li>
             </ul>

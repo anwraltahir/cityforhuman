@@ -24,7 +24,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
   const notifications = store.getNotificationsForUser(userId);
 
   const handleItemClick = (notif: NotificationItem) => {
-    store.markNotificationAsRead(notif.id);
+    if (!notif.isRead) store.markNotificationAsRead(notif.id);
     if (notif.targetType === 'discussion' && notif.targetId) {
       onSelectDiscussion(notif.targetId);
       onClose();
@@ -35,7 +35,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
   };
 
   const handleMarkAllRead = () => {
-    store.markAllNotificationsAsRead(userId);
+    store.markAllNotificationsAsRead();
   };
 
   const getIcon = (type: NotificationItem['type']) => {

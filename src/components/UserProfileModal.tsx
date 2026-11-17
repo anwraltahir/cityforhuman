@@ -42,11 +42,30 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const myDiscussions = allDiscussions.filter((d) => d.authorId === user.id);
   const followedDiscussions = allDiscussions.filter((d) => d.followers.includes(user.id));
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    store.updateUserProfile(user.id, { name, bio, avatar });
-    showToast('تم تحديث ملفك الشخصي بنجاح', 'success');
-    setActiveTab('my_discussions');
+    const res = await store.updateUserProfile(user.id, { name, bio, avatar });
+    if (res.ok) {
+      showToast('تم تحديث ملفك الشخصي بنجاح', 'success');
+      setActiveTab('my_discussions');
+    } else showToast(res.error || 'تعذر حفظ الملف الشخصي', 'error');
+  };
+
+  // Change password
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [newPw2, setNewPw2] = useState('');
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPw.length < 8) return showToast('كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف', 'error');
+    if (newPw !== newPw2) return showToast('كلمتا المرور غير متطابقتين', 'error');
+    const res = await store.changePassword(currentPw, newPw);
+    if (res.ok) {
+      setCurrentPw('');
+      setNewPw('');
+      setNewPw2('');
+      showToast('تم تغيير كلمة المرور', 'success');
+    } else showToast(res.error || 'تعذر تغيير كلمة المرور', 'error');
   };
 
   const formatDate = (iso: string) => {
@@ -239,7 +258,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <div>
                 <label className="block text-xs font-bold text-stone-700 mb-1">رابط الصورة الشخصية (URL)</label>
                 <input
-                  type="url"
+                  type="text"
+                  dir="ltr"
                   value={avatar}
                   onChange={(e) => setAvatar(e.target.value)}
                   className="w-full p-2.5 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-xs text-stone-900 focus:outline-none focus:border-[#268F0C]"
@@ -251,6 +271,44 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 className="w-full py-2.5 bg-[#268F0C] text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs"
               >
                 حفظ التغييرات
+              </button>
+            </form>
+          )}
+
+          {activeTab === 'edit' && (
+            <form onSubmit={handleChangePassword} className="space-y-3 mt-6 pt-5 border-t border-[#F0EAE1]">
+              <h4 className="text-sm font-bold text-stone-800">تغيير كلمة المرور</h4>
+              <input
+                type="password"
+                autoComplete="current-password"
+                placeholder="كلمة المرور الحالية"
+                value={currentPw}
+                onChange={(e) => setCurrentPw(e.target.value)}
+                className="w-full p-2.5 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:border-[#268F0C]"
+              />
+              <div className="grid sm:grid-cols-2 gap-3">
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="كلمة المرور الجديدة (8 أحرف على الأقل)"
+                  value={newPw}
+                  onChange={(e) => setNewPw(e.target.value)}
+                  className="w-full p-2.5 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:border-[#268F0C]"
+                />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="تأكيد كلمة المرور الجديدة"
+                  value={newPw2}
+                  onChange={(e) => setNewPw2(e.target.value)}
+                  className="w-full p-2.5 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:border-[#268F0C]"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs sm:text-sm rounded-xl"
+              >
+                تغيير كلمة المرور
               </button>
             </form>
           )}

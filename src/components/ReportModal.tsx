@@ -33,9 +33,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [reason, setReason] = useState(REPORT_REASONS[0]);
   const [details, setDetails] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const rep = store.submitReport({
+    const res = await store.submitReport({
       targetType,
       targetId,
       targetTitle,
@@ -43,11 +43,11 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       details,
     });
 
-    if (rep) {
+    if (res.ok) {
       showToast('شكراً لحرصك. تم إرسال البلاغ لفريق الإشراف للمراجعة والتدقيق.', 'success');
       onClose();
     } else {
-      showToast('يرجى تسجيل الدخول أولاً لتقديم بلاغ', 'error');
+      showToast(res.error || 'تعذر إرسال البلاغ', 'error');
     }
   };
 

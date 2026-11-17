@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { User, Chapter, Discussion, Article, ReportItem, ModerationAction, SiteSettings } from '../types';
-import { store } from '../services/storage';
+import { store, ActResult } from '../services/storage';
 import { useToast } from './Toast';
 import { CoverManager } from './CoverManager';
 import { InterestList } from './InterestList';
@@ -112,37 +112,59 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     filteredDiscussions = filteredDiscussions.filter((d) => d.chapterId === selectedChapterFilter);
   }
 
+  /** Runs a server action; toasts success only when the server actually saved it. */
+  const run = async (action: Promise<ActResult>, success: string, kind: 'success' | 'info' = 'success') => {
+    const res = await action;
+    if (res.ok) showToast(success, kind);
+    else showToast(res.error || 'تعذر حفظ التعديل', 'error');
+    return res.ok;
+  };
+
   // User Actions
   const handleToggleUserStatus = (user: User) => {
     const nextStatus = user.status === 'active' ? 'suspended' : 'active';
-    store.setUserStatus(user.id, nextStatus, currentUser.name);
-    showToast(
-      `تم ${nextStatus === 'suspended' ? 'تعطيل' : 'تفعيل'} حساب ${user.name}`,
-      'info'
-    );
+    run(store.setUserStatus(user.id, nextStatus), `تم ${nextStatus === 'suspended' ? 'تعطيل' : 'تفعيل'} حساب ${user.name}`, 'info');
+  };
+
+  const handleResetPassword = (user: User) => {
+    const pw = window.prompt(`كلمة مرور مؤقتة جديدة لحساب ${user.name} (8 أحرف على الأقل):`);
+    if (pw) run(store.resetUserPassword(user.id, pw), `تم تعيين كلمة المرور. أرسلها إلى ${user.name}`);
   };
 
   const handleChangeUserRole = (userId: string, role: User['role']) => {
-    store.setUserRole(userId, role, currentUser.name);
-    showToast('تم تحديث رتبة وصلاحيات المستخدم بنجاح', 'success');
+    run(store.setUserRole(userId, role), 'تم تحديث رتبة وصلاحيات المستخدم بنجاح');
   };
 
   // Discussion Actions
   const handleTogglePin = (disc: Discussion) => {
-    store.setDiscussionPinned(disc.id, !disc.isPinned, currentUser.name);
-    showToast(disc.isPinned ? 'تم إلغاء تثبيت النقاش' : 'تم تثبيت النقاش في الأعلى', 'success');
+    run(store.setDiscussionPinned(disc.id, !disc.isPinned), disc.isPinned ? 'تم إلغاء تثبيت النقاش' : 'تم تثبيت النقاش في الأعلى');
   };
 
   const handleToggleLock = (disc: Discussion) => {
-    store.setDiscussionLocked(disc.id, !disc.isLocked, currentUser.name);
-    showToast(disc.isLocked ? 'تمت إعادة فتح الردود على النقاش' : 'تم إغلاق النقاش', 'info');
+    run(store.setDiscussionLocked(disc.id, !disc.isLocked), disc.isLocked ? 'تمت إعادة فتح الردود على النقاش' : 'تم إغلاق النقاش', 'info');
   };
 
   const handleDeleteDiscussion = (disc: Discussion) => {
     if (window.confirm(`هل أنت متأكد من حذف الموضوع: "${disc.title}"؟`)) {
-      store.deleteDiscussion(disc.id, currentUser.name);
-      showToast('تم حذف الموضوع وتعليقاته', 'info');
+      run(store.deleteDiscussion(disc.id), 'تم حذف الموضوع وتعليقاته', 'info');
     }
+  };
+
+  // Discussion edit (title / content / chapter / image)
+  const [editingDisc, setEditingDisc] = useState<Discussion | null>(null);
+  const handleSaveDiscussion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDisc) return;
+    const ok = await run(
+      store.editDiscussion(editingDisc.id, {
+        title: editingDisc.title,
+        content: editingDisc.content,
+        chapterId: editingDisc.chapterId,
+        imageUrl: editingDisc.imageUrl || '',
+      }),
+      'تم حفظ تعديل النقاش'
+    );
+    if (ok) setEditingDisc(null);
   };
 
   // Article Actions
@@ -161,11 +183,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     );
   };
 
-  const handleConfirmReview = () => {
+  const handleConfirmReview = async () => {
     if (!reviewArticleId) return;
-    store.reviewArticle(reviewArticleId, reviewAction, reviewNote, currentUser.name);
-    setReviewArticleId(null);
-    showToast('تم تسجيل قرار مراجعة المقال وإشعار الكاتب', 'success');
+    const ok = await run(store.reviewArticle(reviewArticleId, reviewAction, reviewNote), 'تم تسجيل قرار مراجعة المقال وإشعار الكاتب');
+    if (ok) setReviewArticleId(null);
+  };
+
+  const handleDeleteArticle = (art: Article) => {
+    if (window.confirm(`حذف المقال "${art.title}" نهائياً؟`)) {
+      run(store.deleteArticle(art.id), 'تم حذف المقال', 'info');
+    }
   };
 
   // Chapter Edit
@@ -177,18 +204,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleSaveChapter = async (chId: number) => {
-    const ok = await store.updateChapter(
-      chId,
-      {
-        title: editChapterTitle,
-        subtitle: editChapterSubtitle,
-        description: editChapterDesc,
-      },
-      currentUser.name
+    const ok = await run(
+      store.updateChapter(chId, { title: editChapterTitle, subtitle: editChapterSubtitle, description: editChapterDesc }),
+      'تم تحديث بيانات الفصل بنجاح'
     );
-    setEditingChapterId(null);
-    if (ok) showToast('تم تحديث بيانات الفصل بنجاح', 'success');
-    else showToast('لم يُحفظ التعديل على الخادم، سجّل الخروج ثم ادخل مجدداً وأعد المحاولة', 'error');
+    if (ok) setEditingChapterId(null);
   };
 
   // Report Resolution
@@ -198,17 +218,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       status === 'resolved' ? 'تم اتخاذ الإجراء الإداري اللازم تجاه المحتوى' : 'المحتوى لا يخالف الشروط'
     );
     if (resolution !== null) {
-      store.resolveReport(report.id, resolution, currentUser.name, status);
-      showToast('تم تحديث حالة البلاغ', 'success');
+      run(store.resolveReport(report.id, resolution, status), 'تم تحديث حالة البلاغ');
     }
   };
 
   // Site Settings Save
-  const handleSaveSettings = async (e: React.FormEvent) => {
+  const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    const ok = await store.updateSiteSettings(settings, currentUser.name);
-    if (ok) showToast('تم حفظ إعدادات المنصة بنجاح', 'success');
-    else showToast('لم يُحفظ التعديل على الخادم، سجّل الخروج ثم ادخل مجدداً وأعد المحاولة', 'error');
+    run(store.updateSiteSettings(settings), 'تم حفظ إعدادات المنصة بنجاح');
   };
 
   const formatDate = (iso: string) => {
@@ -586,6 +603,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           >
                             {u.status === 'active' ? 'تعطيل الحساب' : 'إعادة تفعيل'}
                           </button>
+                          {currentUser.role === 'admin' && (
+                            <button
+                              onClick={() => handleResetPassword(u)}
+                              className="mr-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#FAF8F5] text-stone-600 hover:bg-[#EFEAE2] cursor-pointer"
+                            >
+                              كلمة مرور جديدة
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -667,6 +692,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         title="إغلاق الردود"
                       >
                         <Lock className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => setEditingDisc({ ...d })}
+                        className="p-1.5 bg-[#FAF8F5] hover:bg-[#EFEAE2] text-stone-700 rounded-lg text-xs cursor-pointer"
+                        title="تعديل"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
                       </button>
 
                       <button
@@ -775,6 +808,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <span>رفض</span>
                         </button>
                       )}
+                      <button
+                        onClick={() => handleDeleteArticle(art)}
+                        className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs cursor-pointer"
+                        title="حذف المقال"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1033,6 +1073,75 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </main>
 
       {/* Article Review Decision Prompt Modal */}
+      {editingDisc && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50" onClick={() => setEditingDisc(null)}>
+          <form
+            onSubmit={handleSaveDiscussion}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-stone-900">تعديل النقاش</h3>
+              <button type="button" onClick={() => setEditingDisc(null)} className="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">العنوان</label>
+              <input
+                value={editingDisc.title}
+                onChange={(e) => setEditingDisc({ ...editingDisc, title: e.target.value })}
+                maxLength={200}
+                className="w-full p-2.5 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-sm text-stone-900"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">الفصل</label>
+              <select
+                value={editingDisc.chapterId}
+                onChange={(e) => setEditingDisc({ ...editingDisc, chapterId: Number(e.target.value) })}
+                className="w-full p-2.5 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-sm text-stone-900"
+              >
+                {chaptersList.map((ch) => (
+                  <option key={ch.id} value={ch.id}>
+                    {ch.order}. {ch.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">المحتوى</label>
+              <textarea
+                value={editingDisc.content}
+                onChange={(e) => setEditingDisc({ ...editingDisc, content: e.target.value })}
+                rows={8}
+                maxLength={10000}
+                className="w-full p-2.5 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-sm text-stone-900 leading-relaxed"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">رابط الصورة (اختياري)</label>
+              <input
+                value={editingDisc.imageUrl || ''}
+                onChange={(e) => setEditingDisc({ ...editingDisc, imageUrl: e.target.value })}
+                dir="ltr"
+                placeholder="https://… أو /images/…"
+                className="w-full p-2.5 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-sm text-stone-900"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => setEditingDisc(null)} className="px-4 py-2.5 text-xs font-bold text-stone-600 bg-[#FAF8F5] rounded-xl cursor-pointer">
+                إلغاء
+              </button>
+              <button type="submit" className="px-5 py-2.5 text-xs font-bold text-white bg-[#268F0C] hover:bg-[#1F7509] rounded-xl flex items-center gap-1.5 cursor-pointer">
+                <Save className="w-4 h-4" />
+                حفظ التعديل
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {reviewArticleId && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 border border-[#DDD5C7] shadow-2xl text-right space-y-4">

@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { BookOpen, MessageSquare, ArrowLeft, Compass, Users, BellRing } from 'lucide-react';
 import { InterestModal } from './InterestModal';
+import { store } from '../services/storage';
 
 interface HeroSectionProps {
   onDiscoverBook: () => void;
@@ -19,6 +20,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onSelectChapter,
 }) => {
   const [interestOpen, setInterestOpen] = useState(false);
+  const settings = store.getSiteSettings();
   return (
     <section className="relative overflow-hidden pt-8 pb-16 lg:py-20 border-b border-[#E8E2D6] bg-gradient-to-b from-[#FAF8F5] via-[#FAF8F5] to-[#F3EDE3]/40">
       {/* Subtle architectural backdrop lines */}
@@ -34,23 +36,22 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               <span aria-hidden="true" className="text-stone-300">/</span>
               <span>كتاب مدن الإنسان</span>
               <span aria-hidden="true" className="text-stone-300">/</span>
-              <span>المؤلف: عثمان الطيب</span>
+              <span>المؤلف: {settings.authorName}</span>
             </div>
 
             {/* Display Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-stone-900 leading-[1.2] tracking-tight">
-              مدن الإنسان
+              {settings.bookTitle}
             </h1>
 
             {/* Sub-headline directly from the book */}
             <p className="text-xl sm:text-2xl font-bold text-[#E84200] leading-snug">
-              كيف غيرت السيارات المدن؟ وماذا نفعل لتعود المدينة للإنسان؟
+              {settings.bookSubtitle}
             </p>
 
             {/* Intro paragraph */}
-            <p className="text-base sm:text-lg text-stone-700 leading-relaxed max-w-2xl font-normal">
-              من خلال هذا المجتمع نواصل الحوار حول أفكار كتاب «مدن الإنسان»، ونناقش مستقبل مدننا
-              وكيف يمكن أن تصبح أكثر إنسانية وملاءمة لحياة الناس، بعيداً عن هيمنة الأسفلت وصخب المركبات.
+            <p className="text-base sm:text-lg text-stone-700 leading-relaxed max-w-2xl font-normal whitespace-pre-line">
+              {settings.communityIntro}
             </p>
 
             {/* CTAs */}

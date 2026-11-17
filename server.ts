@@ -7,6 +7,7 @@ import 'dotenv/config';
 import crypto from 'crypto';
 import fs from 'fs';
 import express, { NextFunction, Request, Response } from 'express';
+import { Engine, ActionError, StoredUser } from './server/engine';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -34,23 +35,102 @@ async function startServer() {
     });
   });
 
-  // ---- Admin session tokens: "<expiry>.<hmac>", stateless so they survive restarts.
-  // Changing ADMIN_PASSWORD or SESSION_SECRET invalidates every issued token.
-  const tokenKey = () => `${process.env.SESSION_SECRET || ''}:${process.env.ADMIN_PASSWORD || ''}`;
-  const sign = (v: string) => crypto.createHmac('sha256', tokenKey()).update(v).digest('hex');
-  const issueAdminToken = () => {
-    const exp = String(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    return `${exp}.${sign(exp)}`;
+  // ---- Data engine: single source of truth for all community data (./data/db.json)
+  const DATA_DIR = path.resolve(__dirname, 'data');
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  const engine = new Engine(DATA_DIR);
+
+  // ---- User sessions: "<userId>.<expiry>.<hmac>", stateless so they survive restarts.
+  // The signature covers a fingerprint of the user's password, so changing it ends old sessions.
+  const SESSION_DAYS = 30;
+  const sign = (v: string) => crypto.createHmac('sha256', process.env.SESSION_SECRET || '').update(v).digest('hex');
+  const pwPrint = (u: StoredUser) =>
+    crypto.createHash('sha256').update(u.passwordHash || `admin:${process.env.ADMIN_PASSWORD || ''}`).digest('hex').slice(0, 16);
+  const issueToken = (u: StoredUser) => {
+    const exp = String(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+    return `${u.id}.${exp}.${sign(`${u.id}.${exp}.${pwPrint(u)}`)}`;
+  };
+  const sessionUser = (req: Request): StoredUser | null => {
+    const token = String(req.headers.authorization || '').replace(/^Bearer /, '');
+    const [id, exp, mac] = token.split('.');
+    if (!id || !exp || !mac || mac.length !== 64 || Number(exp) < Date.now()) return null;
+    const u = engine.user(id);
+    if (!u || u.status === 'suspended') return null;
+    const good = sign(`${id}.${exp}.${pwPrint(u)}`);
+    return crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(good)) ? u : null;
   };
   const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-    const token = String(req.headers.authorization || '').replace(/^Bearer /, '');
-    const [exp, mac] = token.split('.');
-    const valid =
-      !!process.env.ADMIN_PASSWORD && !!exp && !!mac && Number(exp) > Date.now() &&
-      mac.length === 64 && crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(sign(exp)));
-    if (!valid) return res.status(401).json({ ok: false, error: 'انتهت جلسة الإدارة، سجّل الخروج ثم ادخل مجدداً' });
+    const u = sessionUser(req);
+    if (!u || (u.role !== 'admin' && u.role !== 'moderator')) {
+      return res.status(401).json({ ok: false, error: 'انتهت جلسة الإدارة، سجّل الخروج ثم ادخل مجدداً' });
+    }
     next();
   };
+
+  // Simple per-IP rate limiter
+  const limiter = (max: number, windowMs: number) => {
+    const hits = new Map<string, { count: number; until: number }>();
+    return (req: Request) => {
+      const ip = String(req.headers['x-real-ip'] || req.ip);
+      const t = Date.now();
+      const h = hits.get(ip);
+      if (!h || h.until < t) {
+        hits.set(ip, { count: 1, until: t + windowMs });
+        return true;
+      }
+      h.count++;
+      return h.count <= max;
+    };
+  };
+  const loginLimit = limiter(10, 15 * 60 * 1000);
+  const registerLimit = limiter(5, 60 * 60 * 1000);
+  const actionLimit = limiter(120, 60 * 1000);
+
+  const sendError = (res: Response, err: unknown) => {
+    if (err instanceof ActionError) return res.status(err.status).json({ ok: false, error: err.message });
+    console.error(err);
+    return res.status(500).json({ ok: false, error: 'حدث خطأ غير متوقع في الخادم' });
+  };
+
+  // Full state for the viewer (public data + their own private data)
+  app.get('/api/state', (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ ok: true, state: engine.stateFor(sessionUser(req)) });
+  });
+
+  app.post('/api/auth/login', (req: Request, res: Response) => {
+    if (!loginLimit(req)) return res.status(429).json({ ok: false, error: 'محاولات كثيرة، حاول بعد 15 دقيقة' });
+    try {
+      const u = engine.login(req.body?.identifier, req.body?.password, process.env.ADMIN_PASSWORD || '');
+      res.json({ ok: true, token: issueToken(u), state: engine.stateFor(u) });
+    } catch (err) {
+      sendError(res, err);
+    }
+  });
+
+  app.post('/api/auth/register', (req: Request, res: Response) => {
+    if (!registerLimit(req)) return res.status(429).json({ ok: false, error: 'محاولات كثيرة، حاول لاحقاً' });
+    try {
+      const u = engine.register(req.body || {});
+      res.json({ ok: true, token: issueToken(u), state: engine.stateFor(u) });
+    } catch (err) {
+      sendError(res, err);
+    }
+  });
+
+  // Every change goes through here: { type, args } runs as the signed-in user
+  app.post('/api/action', (req: Request, res: Response) => {
+    if (!actionLimit(req)) return res.status(429).json({ ok: false, error: 'طلبات كثيرة، انتظر قليلاً' });
+    const actor = sessionUser(req);
+    try {
+      const result = engine.run(String(req.body?.type || ''), req.body?.args || {}, actor);
+      // A password change invalidates the old token, so hand back a fresh one
+      const token = req.body?.type === 'changePassword' && actor ? issueToken(actor) : undefined;
+      res.json({ ok: true, result, token, state: engine.stateFor(actor) });
+    } catch (err) {
+      sendError(res, err);
+    }
+  });
 
   // ---- Book covers: uploaded files live in ./uploads (outside dist, survives rebuilds)
   const UPLOAD_DIR = path.resolve(__dirname, 'uploads');
@@ -94,31 +174,7 @@ async function startServer() {
     res.json({ ok: true });
   });
 
-  // Admin password check (password lives in .env as ADMIN_PASSWORD, never in the client bundle)
-  const failedAttempts = new Map<string, { count: number; until: number }>();
-  app.post('/api/admin/verify', (req: Request, res: Response) => {
-    const ip = String(req.headers['x-real-ip'] || req.ip);
-    const now = Date.now();
-    const rec = failedAttempts.get(ip);
-    if (rec && rec.count >= 5 && rec.until > now) {
-      return res.status(429).json({ ok: false, error: 'محاولات كثيرة، حاول بعد 15 دقيقة' });
-    }
-    const expected = process.env.ADMIN_PASSWORD || '';
-    const given = String(req.body?.password ?? '');
-    const a = crypto.createHash('sha256').update(given).digest();
-    const b = crypto.createHash('sha256').update(expected).digest();
-    if (expected && crypto.timingSafeEqual(a, b)) {
-      failedAttempts.delete(ip);
-      return res.json({ ok: true, token: issueAdminToken() });
-    }
-    const count = (rec && rec.until > now ? rec.count : 0) + 1;
-    failedAttempts.set(ip, { count, until: now + 15 * 60 * 1000 });
-    return res.status(401).json({ ok: false, error: 'كلمة المرور غير صحيحة' });
-  });
-
   // ---- "Register your interest" (pre-launch mailing list), stored in ./data (gitignored)
-  const DATA_DIR = path.resolve(__dirname, 'data');
-  fs.mkdirSync(DATA_DIR, { recursive: true });
   const INTEREST_FILE = path.join(DATA_DIR, 'interest.json');
   type Interest = { id: string; name: string; email: string; phone: string; country: string; createdAt: string };
   const readInterest = (): Interest[] => {
@@ -175,46 +231,6 @@ async function startServer() {
 
   app.delete('/api/admin/interest/:id', requireAdmin, (req: Request, res: Response) => {
     writeInterest(readInterest().filter((x) => x.id !== req.params.id));
-    res.json({ ok: true });
-  });
-
-  // ---- Admin-edited site content (settings + chapter texts), shared by every visitor.
-  // Stored in ./data/content.json so edits made on one device show on all devices.
-  const CONTENT_FILE = path.join(DATA_DIR, 'content.json');
-  type Content = { settings?: Record<string, unknown>; chapters?: Record<string, Record<string, unknown>> };
-  const readContent = (): Content => {
-    try { return JSON.parse(fs.readFileSync(CONTENT_FILE, 'utf8')); } catch { return {}; }
-  };
-  const SETTINGS_FIELDS = ['bookTitle', 'bookSubtitle', 'authorName', 'authorBio', 'communityIntro', 'officialDomain', 'contactEmail'];
-  const CHAPTER_FIELDS = ['title', 'subtitle', 'description', 'keyThemes', 'order', 'isActive'];
-  const pick = (obj: unknown, fields: string[]) => {
-    const out: Record<string, unknown> = {};
-    if (obj && typeof obj === 'object') {
-      for (const f of fields) if (f in obj) out[f] = (obj as Record<string, unknown>)[f];
-    }
-    return out;
-  };
-
-  app.get('/api/content', (_req: Request, res: Response) => {
-    res.setHeader('Cache-Control', 'no-store');
-    res.json(readContent());
-  });
-
-  app.put('/api/admin/content', requireAdmin, (req: Request, res: Response) => {
-    const content = readContent();
-    if (req.body?.settings) {
-      content.settings = { ...content.settings, ...pick(req.body.settings, SETTINGS_FIELDS) };
-    }
-    if (req.body?.chapters && typeof req.body.chapters === 'object') {
-      content.chapters = content.chapters || {};
-      for (const [id, data] of Object.entries(req.body.chapters)) {
-        if (!/^\d+$/.test(id)) continue;
-        content.chapters[id] = { ...content.chapters[id], ...pick(data, CHAPTER_FIELDS) };
-      }
-    }
-    const tmp = `${CONTENT_FILE}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(content, null, 1));
-    fs.renameSync(tmp, CONTENT_FILE);
     res.json({ ok: true });
   });
 

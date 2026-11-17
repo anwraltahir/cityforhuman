@@ -1,6 +1,11 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Client data store. The server (server/engine.ts) is the single source of truth:
+ * every change is sent to /api/action and the server returns the fresh state, so an
+ * edit made on one device shows on every other device. The last state is cached in
+ * localStorage only to render instantly on the next visit.
  */
 
 import {
@@ -15,204 +20,185 @@ import {
   SiteSettings,
   UserRole,
 } from '../types';
-import {
-  INITIAL_CHAPTERS,
-  INITIAL_USERS,
-  INITIAL_DISCUSSIONS,
-  INITIAL_COMMENTS,
-  INITIAL_ARTICLES,
-  INITIAL_SITE_SETTINGS,
-} from '../data/initialData';
+import { INITIAL_CHAPTERS, INITIAL_SITE_SETTINGS } from '../data/initialData';
 
-const REMOVED_DEMO_USERS = ['user_sara_urban', 'user_tariq_arch'];
-const ADMIN_VERIFIED_KEY = 'cfh_admin_verified';
-const ADMIN_TOKEN_KEY = 'cfh_admin_token';
-const isPrivileged = (u: User) => u.role === 'admin' || u.role === 'moderator';
+interface ServerState {
+  me: User | null;
+  users: User[];
+  chapters: Chapter[];
+  discussions: Discussion[];
+  comments: Comment[];
+  articles: Article[];
+  notifications: NotificationItem[];
+  reports: ReportItem[];
+  moderationLog: ModerationAction[];
+  settings: SiteSettings;
+  importedLocal: boolean;
+}
 
-const STORAGE_KEYS = {
-  CURRENT_USER: 'cfh_current_user',
-  USERS: 'cfh_users',
-  CHAPTERS: 'cfh_chapters',
-  DISCUSSIONS: 'cfh_discussions',
-  COMMENTS: 'cfh_comments',
-  ARTICLES: 'cfh_articles',
-  NOTIFICATIONS: 'cfh_notifications',
-  REPORTS: 'cfh_reports',
-  MODERATION_LOG: 'cfh_moderation_log',
-  SITE_SETTINGS: 'cfh_site_settings',
+/** Result of a server action: `error` holds an Arabic message ready for a toast. */
+export interface ActResult<T = unknown> {
+  ok: boolean;
+  result?: T;
+  error?: string;
+}
+
+const SESSION_KEY = 'cfh_session';
+const CACHE_KEY = 'cfh_state_cache';
+const REFRESH_MS = 30_000;
+
+// Keys used by the old browser-only version (read once for migration, then removed)
+const LEGACY_KEYS = [
+  'cfh_current_user', 'cfh_users', 'cfh_chapters', 'cfh_discussions', 'cfh_comments', 'cfh_articles',
+  'cfh_notifications', 'cfh_reports', 'cfh_moderation_log', 'cfh_site_settings', 'cfh_admin_verified', 'cfh_admin_token',
+];
+
+const emptyState = (): ServerState => ({
+  me: null,
+  users: [],
+  chapters: INITIAL_CHAPTERS.map((c) => ({ ...c, discussionsCount: 0, commentsCount: 0 })),
+  discussions: [],
+  comments: [],
+  articles: [],
+  notifications: [],
+  reports: [],
+  moderationLog: [],
+  settings: INITIAL_SITE_SETTINGS,
+  importedLocal: true,
+});
+
+const safeGet = (key: string) => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+const safeSet = (key: string, value: string | null) => {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+    // storage unavailable (private mode): the site still works, just without the cache
+  }
 };
 
 class DataStore {
-  private users: User[] = [];
-  private chapters: Chapter[] = [];
-  private discussions: Discussion[] = [];
-  private comments: Comment[] = [];
-  private articles: Article[] = [];
-  private notifications: NotificationItem[] = [];
-  private reports: ReportItem[] = [];
-  private moderationLog: ModerationAction[] = [];
-  private siteSettings: SiteSettings = INITIAL_SITE_SETTINGS;
-  private currentUser: User | null = null;
+  private state: ServerState = emptyState();
+  private token: string = safeGet(SESSION_KEY) || '';
+  private loaded = false;
+  private hadCache = false;
   private listeners: Set<() => void> = new Set();
+  private viewed = new Set<string>();
 
   constructor() {
-    this.init();
-    this.loadSharedContent();
-  }
-
-  /** Pull admin-edited content (settings + chapter texts) from the server, shared by all devices. */
-  private async loadSharedContent() {
+    // Render instantly from the last known state, then refresh from the server
     try {
-      const r = await fetch('/api/content', { cache: 'no-store' });
-      if (!r.ok) return;
-      const content: { settings?: Partial<SiteSettings>; chapters?: Record<string, Partial<Chapter>> } = await r.json();
-      const hasServerContent = !!content.settings || !!content.chapters;
-      if (content.settings) {
-        this.siteSettings = { ...this.siteSettings, ...content.settings };
-        this.saveToStorage(STORAGE_KEYS.SITE_SETTINGS, this.siteSettings);
-      }
-      if (content.chapters) {
-        this.chapters = this.chapters.map((ch) => ({ ...ch, ...(content.chapters![String(ch.id)] || {}) }));
-        this.saveToStorage(STORAGE_KEYS.CHAPTERS, this.chapters);
-      }
-      // One-time migration: if the server has nothing yet and this browser holds the admin's
-      // earlier edits, upload them so other devices see them too.
-      if (!hasServerContent && this.getAdminToken()) {
-        const chapters: Record<string, Partial<Chapter>> = {};
-        this.chapters.forEach((ch) => {
-          chapters[ch.id] = { title: ch.title, subtitle: ch.subtitle, description: ch.description, keyThemes: ch.keyThemes, order: ch.order, isActive: ch.isActive };
-        });
-        await this.pushSharedContent({ settings: this.siteSettings, chapters });
+      const cached = safeGet(CACHE_KEY);
+      if (cached) {
+        this.state = { ...emptyState(), ...JSON.parse(cached) };
+        this.hadCache = true;
+        if (!this.token) this.state.me = null;
       }
     } catch {
-      // Offline: keep locally cached content
+      // ignore a corrupt cache
     }
-  }
-
-  private async pushSharedContent(body: { settings?: Partial<SiteSettings>; chapters?: Record<string, Partial<Chapter>> }): Promise<boolean> {
-    try {
-      const r = await fetch('/api/admin/content', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.getAdminToken()}` },
-        body: JSON.stringify(body),
+    this.refresh();
+    if (typeof window !== 'undefined') {
+      window.setInterval(() => {
+        if (document.visibilityState === 'visible') this.refresh();
+      }, REFRESH_MS);
+      window.addEventListener('focus', () => this.refresh());
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') this.refresh();
       });
-      return r.ok;
-    } catch {
-      return false;
     }
   }
 
-  private init() {
+  // ------------------------------------------------------------ sync plumbing
+  private headers(): Record<string, string> {
+    const h: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (this.token) h.Authorization = `Bearer ${this.token}`;
+    return h;
+  }
+
+  private apply(state: ServerState) {
+    this.state = state;
+    this.loaded = true;
+    // Token expired or account suspended: the server no longer recognises us
+    if (this.token && !state.me) this.setToken('');
+    safeSet(CACHE_KEY, JSON.stringify({ ...state, me: null, notifications: [], reports: [], moderationLog: [] }));
+    this.notifyListeners();
+    this.migrateLegacy();
+  }
+
+  private setToken(token: string) {
+    this.token = token;
+    safeSet(SESSION_KEY, token || null);
+  }
+
+  /** Re-read everything from the server. */
+  public async refresh(): Promise<void> {
     try {
-      this.users = this.loadFromStorage(STORAGE_KEYS.USERS, INITIAL_USERS);
-      this.chapters = this.loadFromStorage(STORAGE_KEYS.CHAPTERS, INITIAL_CHAPTERS);
-      this.discussions = this.loadFromStorage(STORAGE_KEYS.DISCUSSIONS, INITIAL_DISCUSSIONS);
-      this.comments = this.loadFromStorage(STORAGE_KEYS.COMMENTS, INITIAL_COMMENTS);
-      this.articles = this.loadFromStorage(STORAGE_KEYS.ARTICLES, INITIAL_ARTICLES);
-      this.notifications = this.loadFromStorage(STORAGE_KEYS.NOTIFICATIONS, [
-        {
-          id: 'notif_welcome',
-          userId: 'user_author_osman',
-          title: 'مرحباً بك في مجتمع مدن الإنسان',
-          message: 'تم إطلاق المنصة بنجاح لمناقشة أفكار الكتاب والتخطيط الحضري الإنساني.',
-          type: 'system',
-          isRead: false,
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-      this.reports = this.loadFromStorage(STORAGE_KEYS.REPORTS, []);
-      this.moderationLog = this.loadFromStorage(STORAGE_KEYS.MODERATION_LOG, [
-        {
-          id: 'mod_1',
-          moderatorName: 'عثمان الطيب',
-          action: 'تهيئة النظام',
-          target: 'منصة مدن الإنسان',
-          details: 'إطلاق النظام مع الفصول العشرة وحساب الإدارة المعتمد',
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-      this.siteSettings = this.loadFromStorage(STORAGE_KEYS.SITE_SETTINGS, INITIAL_SITE_SETTINGS);
-
-      // Purge removed demo accounts (and their content) from data saved by earlier versions
-      const gone = (id: string) => REMOVED_DEMO_USERS.includes(id);
-      const keepIds = (ids?: string[]) => (ids || []).filter((id) => !gone(id));
-      if (this.users.some((u) => gone(u.id))) {
-        this.users = this.users.filter((u) => !gone(u.id));
-        this.discussions = this.discussions.filter((d) => !gone(d.authorId));
-        const discIds = new Set(this.discussions.map((d) => d.id));
-        this.comments = this.comments.filter((c) => !gone(c.authorId) && discIds.has(c.discussionId));
-        this.articles = this.articles.filter((a) => !gone(a.authorId));
-        this.discussions = this.discussions.map((d) => ({
-          ...d,
-          likes: keepIds(d.likes),
-          followers: keepIds(d.followers),
-          commentsCount: this.comments.filter((c) => c.discussionId === d.id).length,
-        }));
-        this.comments = this.comments.map((c) => ({ ...c, likes: keepIds(c.likes) }));
-        this.saveToStorage(STORAGE_KEYS.USERS, this.users);
-        this.saveToStorage(STORAGE_KEYS.DISCUSSIONS, this.discussions);
-        this.saveToStorage(STORAGE_KEYS.COMMENTS, this.comments);
-        this.saveToStorage(STORAGE_KEYS.ARTICLES, this.articles);
-      }
-
-      // Restore saved user (visitors start signed out)
-      const savedUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      if (savedUser && !REMOVED_DEMO_USERS.some((id) => savedUser.includes(`"id":"${id}"`))) {
-        this.currentUser = JSON.parse(savedUser.split('/src/assets/images/').join('/images/'));
-      } else {
-        this.currentUser = null; // visitors start signed out
-      }
-      // Privileged sessions must have passed the server password check
-      if (this.currentUser && isPrivileged(this.currentUser) && localStorage.getItem(ADMIN_VERIFIED_KEY) !== this.currentUser.id) {
-        this.currentUser = null;
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-      }
-
-      // Ensure author Osman's avatar, bio, and email are synchronized with official asset
-      const osman = this.users.find((u) => u.id === 'user_author_osman');
-      if (osman) {
-        osman.avatar = '/images/author_osman_square.jpeg';
-        osman.bio = INITIAL_USERS[0].bio;
-        osman.email = 'osman7777@gmail.com';
-      }
-      this.siteSettings.contactEmail = 'osman7777@gmail.com';
-      if (this.currentUser && this.currentUser.id === 'user_author_osman') {
-        this.currentUser.avatar = '/images/author_osman_square.jpeg';
-        this.currentUser.bio = INITIAL_USERS[0].bio;
-        this.currentUser.email = 'osman7777@gmail.com';
-      }
-      if (this.currentUser) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
-      }
+      const r = await fetch('/api/state', { headers: this.headers(), cache: 'no-store' });
+      const data = await r.json();
+      if (data.ok) this.apply(data.state);
     } catch {
-      this.users = INITIAL_USERS;
-      this.chapters = INITIAL_CHAPTERS;
-      this.discussions = INITIAL_DISCUSSIONS;
-      this.comments = INITIAL_COMMENTS;
-      this.articles = INITIAL_ARTICLES;
-      this.siteSettings = INITIAL_SITE_SETTINGS;
-      this.currentUser = null;
+      // offline: keep showing the cached state
     }
   }
 
-  private loadFromStorage<T>(key: string, fallback: T): T {
+  private async act<T = unknown>(type: string, args: Record<string, unknown> = {}): Promise<ActResult<T>> {
     try {
-      const item = localStorage.getItem(key);
-      // Migrate image paths saved before images moved to /public/images
-      if (item) return JSON.parse(item.split('/src/assets/images/').join('/images/'));
+      const r = await fetch('/api/action', { method: 'POST', headers: this.headers(), body: JSON.stringify({ type, args }) });
+      const data = await r.json().catch(() => ({}));
+      if (data.token) this.setToken(data.token);
+      if (data.state) this.apply(data.state);
+      if (!r.ok || !data.ok) return { ok: false, error: data.error || 'تعذر تنفيذ العملية' };
+      return { ok: true, result: data.result as T };
     } catch {
-      // Fallback
+      return { ok: false, error: 'تعذر الاتصال بالخادم، تحقق من الإنترنت وحاول مجدداً' };
     }
-    return fallback;
   }
 
-  private saveToStorage(key: string, data: unknown) {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-      this.notifyListeners();
-    } catch (e) {
-      console.warn('Storage save failed:', e);
+  /**
+   * One-time move of data that the old version kept only in this browser.
+   * Runs for the admin when the server has not imported yet; the legacy keys are
+   * then removed everywhere once the server reports the import is done.
+   */
+  private migrating = false;
+  private async migrateLegacy() {
+    if (this.migrating || !safeGet('cfh_discussions')) return;
+    if (this.state.importedLocal) {
+      LEGACY_KEYS.forEach((k) => safeSet(k, null));
+      return;
     }
+    if (this.state.me?.role !== 'admin') return;
+    this.migrating = true;
+    const read = (k: string) => {
+      try {
+        return JSON.parse((safeGet(k) || 'null').split('/src/assets/images/').join('/images/'));
+      } catch {
+        return null;
+      }
+    };
+    const res = await this.act('importLocal', {
+      users: read('cfh_users') || [],
+      discussions: read('cfh_discussions') || [],
+      comments: read('cfh_comments') || [],
+      articles: read('cfh_articles') || [],
+    });
+    if (res.ok) LEGACY_KEYS.forEach((k) => safeSet(k, null));
+    this.migrating = false;
+  }
+
+  public isLoaded(): boolean {
+    return this.loaded;
+  }
+
+  /** True once there is something real to show (server data or the cached copy). */
+  public isReady(): boolean {
+    return this.loaded || this.hadCache;
   }
 
   public subscribe(listener: () => void): () => void {
@@ -226,798 +212,274 @@ class DataStore {
     this.listeners.forEach((listener) => listener());
   }
 
-  // --- Auth & Users ---
+  // ------------------------------------------------------------ session & users
   public getCurrentUser(): User | null {
-    return this.currentUser;
+    return this.state.me;
   }
 
-  public setCurrentUser(user: User | null) {
-    this.currentUser = user;
-    if (user) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-    }
-    this.notifyListeners();
-  }
-
-  public getUsers(): User[] {
-    return [...this.users];
-  }
-
-  public getUserById(id: string): User | undefined {
-    return this.users.find((u) => u.id === id);
-  }
-
-  public register(name: string, username: string, email: string): { success: boolean; user?: User; error?: string } {
-    if (this.users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-      return { success: false, error: 'البريد الإلكتروني مسجل بالفعل' };
-    }
-    if (this.users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
-      return { success: false, error: 'اسم المستخدم مستخدم مسبقاً' };
-    }
-
-    const newUser: User = {
-      id: `user_${Date.now()}`,
-      name,
-      username,
-      email,
-      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=C1E2B9&textColor=268F0C`,
-      role: 'member',
-      status: 'active',
-      joinedAt: new Date().toISOString(),
-    };
-
-    this.users.push(newUser);
-    this.saveToStorage(STORAGE_KEYS.USERS, this.users);
-    this.setCurrentUser(newUser);
-
-    // Welcome notification
-    this.createNotification({
-      userId: newUser.id,
-      title: 'أهلاً بك في مجتمع مدن الإنسان!',
-      message: 'نسعد بمشاركتك في الحوار حول مستقبل مدننا الإنسانية ومناقشة فصول الكتاب.',
-      type: 'system',
-    });
-
-    return { success: true, user: newUser };
-  }
-
-  public findLoginUser(emailOrUsername: string): User | undefined {
-    const trimmed = emailOrUsername.trim().toLowerCase();
-    return this.users.find(
-      (u) =>
-        u.email.toLowerCase() === trimmed ||
-        u.username.toLowerCase() === trimmed ||
-        (u.id === 'user_author_osman' &&
-          (trimmed === 'osman7777@gmail.com' || trimmed === 'admin@cityforhuman.com'))
-    );
-  }
-
-  /** Call only after /api/admin/verify succeeded for this user. */
-  public markAdminVerified(userId: string, token?: string) {
-    localStorage.setItem(ADMIN_VERIFIED_KEY, userId);
-    if (token) localStorage.setItem(ADMIN_TOKEN_KEY, token);
-  }
-
-  /** Signed server token for admin API calls (cover upload etc.). */
+  /** Session token for admin-only HTTP endpoints (covers, interest list). */
   public getAdminToken(): string {
-    return localStorage.getItem(ADMIN_TOKEN_KEY) || '';
+    return this.token;
   }
 
-  public login(emailOrUsername: string): { success: boolean; user?: User; error?: string } {
-    const trimmed = emailOrUsername.trim().toLowerCase();
-    const user = this.users.find(
-      (u) =>
-        u.email.toLowerCase() === trimmed ||
-        u.username.toLowerCase() === trimmed ||
-        (u.id === 'user_author_osman' &&
-          (trimmed === 'osman7777@gmail.com' || trimmed === 'admin@cityforhuman.com'))
-    );
-
-    if (!user) {
-      return { success: false, error: 'لم يتم العثور على حساب بهذه البيانات' };
+  private async auth(path: string, body: Record<string, unknown>): Promise<{ success: boolean; user?: User; error?: string }> {
+    try {
+      const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.ok) return { success: false, error: data.error || 'تعذر تسجيل الدخول' };
+      this.setToken(data.token);
+      this.apply(data.state);
+      return { success: true, user: data.state.me };
+    } catch {
+      return { success: false, error: 'تعذر الاتصال بالخادم' };
     }
+  }
 
-    if (user.status === 'suspended') {
-      return { success: false, error: 'هذا الحساب معطل حالياً من قِبل إدارة المنصة' };
-    }
+  public register(name: string, username: string, email: string, password: string) {
+    return this.auth('/api/auth/register', { name, username, email, password });
+  }
 
-    if (isPrivileged(user) && localStorage.getItem(ADMIN_VERIFIED_KEY) !== user.id) {
-      return { success: false, error: 'هذا الحساب يتطلب كلمة مرور الإدارة' };
-    }
-
-    this.setCurrentUser(user);
-    return { success: true, user };
+  public login(identifier: string, password: string) {
+    return this.auth('/api/auth/login', { identifier, password });
   }
 
   public logout() {
-    localStorage.removeItem(ADMIN_VERIFIED_KEY);
-    localStorage.removeItem(ADMIN_TOKEN_KEY);
-    this.setCurrentUser(null);
+    this.setToken('');
+    this.state = { ...this.state, me: null, notifications: [], reports: [], moderationLog: [] };
+    this.notifyListeners();
+    this.refresh();
+  }
+
+  public getUsers(): User[] {
+    return [...this.state.users];
+  }
+
+  public getUserById(id: string): User | undefined {
+    return this.state.users.find((u) => u.id === id);
   }
 
   public updateUserProfile(userId: string, data: Partial<Pick<User, 'name' | 'bio' | 'avatar'>>) {
-    const user = this.users.find((u) => u.id === userId);
-    if (!user) return;
-
-    if (data.name) user.name = data.name;
-    if (data.bio !== undefined) user.bio = data.bio;
-    if (data.avatar) user.avatar = data.avatar;
-
-    this.saveToStorage(STORAGE_KEYS.USERS, this.users);
-
-    if (this.currentUser && this.currentUser.id === userId) {
-      this.currentUser = { ...user };
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
-    }
-    this.notifyListeners();
+    return this.act('updateProfile', { userId, ...data });
   }
 
-  public setUserStatus(userId: string, status: 'active' | 'suspended', moderatorName: string) {
-    const user = this.users.find((u) => u.id === userId);
-    if (!user) return;
-    user.status = status;
-    this.saveToStorage(STORAGE_KEYS.USERS, this.users);
-
-    this.addModerationLog({
-      moderatorName,
-      action: status === 'suspended' ? 'تعطيل حساب مستخدم' : 'تفعيل حساب مستخدم',
-      target: user.name,
-      details: `تم تعديل حالة حساب @${user.username} إلى ${status === 'suspended' ? 'معطل' : 'نشط'}`,
-    });
+  public changePassword(current: string, next: string) {
+    return this.act('changePassword', { current, next });
   }
 
-  public setUserRole(userId: string, role: UserRole, moderatorName: string) {
-    const user = this.users.find((u) => u.id === userId);
-    if (!user) return;
-    user.role = role;
-    this.saveToStorage(STORAGE_KEYS.USERS, this.users);
-
-    this.addModerationLog({
-      moderatorName,
-      action: 'تغيير صلاحيات مستخدم',
-      target: user.name,
-      details: `تم تغيير رتبة @${user.username} إلى ${role}`,
-    });
+  public setUserStatus(userId: string, status: 'active' | 'suspended') {
+    return this.act('setUserStatus', { userId, status });
   }
 
-  // --- Chapters ---
+  public resetUserPassword(userId: string, password: string) {
+    return this.act('resetUserPassword', { userId, password });
+  }
+
+  public setUserRole(userId: string, role: UserRole) {
+    return this.act('setUserRole', { userId, role });
+  }
+
+  // ------------------------------------------------------------ chapters
   public getChapters(): Chapter[] {
-    return [...this.chapters].sort((a, b) => a.order - b.order);
+    return [...this.state.chapters].sort((a, b) => a.order - b.order);
   }
 
   public getChapterById(id: number): Chapter | undefined {
-    return this.chapters.find((c) => c.id === id);
+    return this.state.chapters.find((c) => c.id === id);
   }
 
-  public updateChapter(id: number, data: Partial<Chapter>, moderatorName: string): Promise<boolean> {
-    const chapter = this.chapters.find((c) => c.id === id);
-    if (!chapter) return Promise.resolve(false);
-    Object.assign(chapter, data);
-    this.saveToStorage(STORAGE_KEYS.CHAPTERS, this.chapters);
-    const saved = this.pushSharedContent({ chapters: { [id]: data } });
-
-    this.addModerationLog({
-      moderatorName,
-      action: 'تعديل بيانات الفصل',
-      target: chapter.title,
-      details: `تم تحديث محتوى أو ترتيب الفصل رقم ${chapter.id}`,
-    });
-    return saved;
+  public updateChapter(id: number, data: Partial<Chapter>) {
+    return this.act('updateChapter', { id, data });
   }
 
-  // --- Discussions ---
+  // ------------------------------------------------------------ discussions
   public getDiscussions(chapterId?: number, query?: string, sort: 'latest' | 'active' | 'views' = 'latest'): Discussion[] {
-    let list = [...this.discussions];
-
-    if (chapterId) {
-      list = list.filter((d) => d.chapterId === chapterId);
-    }
-
+    let list = [...this.state.discussions];
+    if (chapterId) list = list.filter((d) => d.chapterId === chapterId);
     if (query && query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter((d) => d.title.toLowerCase().includes(q) || d.content.toLowerCase().includes(q));
     }
-
-    // Always keep pinned items on top
+    // Pinned items always stay on top
     return list.sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-
-      if (sort === 'active') {
-        const aActivity = a.commentsCount * 2 + a.likes.length;
-        const bActivity = b.commentsCount * 2 + b.likes.length;
-        return bActivity - aActivity;
-      }
-      if (sort === 'views') {
-        return b.views - a.views;
-      }
+      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+      if (sort === 'active') return b.commentsCount * 2 + b.likes.length - (a.commentsCount * 2 + a.likes.length);
+      if (sort === 'views') return b.views - a.views;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }
 
   public getDiscussionById(id: string): Discussion | undefined {
-    return this.discussions.find((d) => d.id === id);
+    return this.state.discussions.find((d) => d.id === id);
   }
 
+  /** Counts a view once per page load. */
   public incrementDiscussionViews(id: string) {
-    const disc = this.discussions.find((d) => d.id === id);
-    if (!disc) return;
-    disc.views += 1;
-    this.saveToStorage(STORAGE_KEYS.DISCUSSIONS, this.discussions);
+    if (this.viewed.has(id)) return;
+    this.viewed.add(id);
+    this.act('viewDiscussion', { id });
   }
 
-  public createDiscussion(params: {
-    chapterId: number;
-    title: string;
-    content: string;
-    imageUrl?: string;
-  }): Discussion | null {
-    if (!this.currentUser) return null;
-
-    const newDisc: Discussion = {
-      id: `disc_${Date.now()}`,
-      chapterId: params.chapterId,
-      title: params.title.trim(),
-      content: params.content.trim(),
-      authorId: this.currentUser.id,
-      authorName: this.currentUser.name,
-      authorAvatar: this.currentUser.avatar,
-      authorRole: this.currentUser.role,
-      imageUrl: params.imageUrl?.trim() || undefined,
-      views: 1,
-      likes: [],
-      followers: [this.currentUser.id],
-      commentsCount: 0,
-      isPinned: false,
-      isLocked: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.discussions.unshift(newDisc);
-
-    // Update chapter discussion count
-    const ch = this.chapters.find((c) => c.id === params.chapterId);
-    if (ch) {
-      ch.discussionsCount += 1;
-      this.saveToStorage(STORAGE_KEYS.CHAPTERS, this.chapters);
-    }
-
-    this.saveToStorage(STORAGE_KEYS.DISCUSSIONS, this.discussions);
-    return newDisc;
+  public createDiscussion(params: { chapterId: number; title: string; content: string; imageUrl?: string }) {
+    return this.act<Discussion>('createDiscussion', params);
   }
 
-  public toggleLikeDiscussion(discussionId: string): boolean {
-    if (!this.currentUser) return false;
-    const disc = this.discussions.find((d) => d.id === discussionId);
-    if (!disc) return false;
-
-    const index = disc.likes.indexOf(this.currentUser.id);
-    let isLikedNow = false;
-
-    if (index >= 0) {
-      disc.likes.splice(index, 1);
-    } else {
-      disc.likes.push(this.currentUser.id);
-      isLikedNow = true;
-
-      // Notify author if not self
-      if (disc.authorId !== this.currentUser.id) {
-        this.createNotification({
-          userId: disc.authorId,
-          title: 'إعجاب بنقاشك',
-          message: `أعجب ${this.currentUser.name} بنقاشك: "${disc.title.slice(0, 40)}..."`,
-          type: 'like',
-          targetType: 'discussion',
-          targetId: disc.id,
-        });
-      }
-    }
-
-    this.saveToStorage(STORAGE_KEYS.DISCUSSIONS, this.discussions);
-    return isLikedNow;
+  public editDiscussion(id: string, data: { title?: string; content?: string; imageUrl?: string; chapterId?: number }) {
+    return this.act('editDiscussion', { id, ...data });
   }
 
-  public toggleFollowDiscussion(discussionId: string): boolean {
-    if (!this.currentUser) return false;
-    const disc = this.discussions.find((d) => d.id === discussionId);
-    if (!disc) return false;
-
-    const index = disc.followers.indexOf(this.currentUser.id);
-    let isFollowingNow = false;
-
-    if (index >= 0) {
-      disc.followers.splice(index, 1);
-    } else {
-      disc.followers.push(this.currentUser.id);
-      isFollowingNow = true;
-    }
-
-    this.saveToStorage(STORAGE_KEYS.DISCUSSIONS, this.discussions);
-    return isFollowingNow;
+  public toggleLikeDiscussion(id: string) {
+    return this.act<boolean>('toggleLikeDiscussion', { id });
   }
 
-  public setDiscussionPinned(discussionId: string, isPinned: boolean, moderatorName: string) {
-    const disc = this.discussions.find((d) => d.id === discussionId);
-    if (!disc) return;
-    disc.isPinned = isPinned;
-    this.saveToStorage(STORAGE_KEYS.DISCUSSIONS, this.discussions);
-
-    this.addModerationLog({
-      moderatorName,
-      action: isPinned ? 'تثبيت نقاش' : 'إلغاء تثبيت نقاش',
-      target: disc.title,
-      details: `تم ${isPinned ? 'تثبيت' : 'إلغاء تثبيت'} الموضوع في الفصل ${disc.chapterId}`,
-    });
+  public toggleFollowDiscussion(id: string) {
+    return this.act<boolean>('toggleFollowDiscussion', { id });
   }
 
-  public setDiscussionLocked(discussionId: string, isLocked: boolean, moderatorName: string) {
-    const disc = this.discussions.find((d) => d.id === discussionId);
-    if (!disc) return;
-    disc.isLocked = isLocked;
-    this.saveToStorage(STORAGE_KEYS.DISCUSSIONS, this.discussions);
-
-    this.addModerationLog({
-      moderatorName,
-      action: isLocked ? 'إغلاق نقاش' : 'إعادة فتح نقاش',
-      target: disc.title,
-      details: `تم ${isLocked ? 'إغلاق' : 'فتح'} الردود على هذا النقاش`,
-    });
+  public setDiscussionPinned(id: string, value: boolean) {
+    return this.act('setDiscussionPinned', { id, value });
   }
 
-  public deleteDiscussion(discussionId: string, moderatorName: string) {
-    const disc = this.discussions.find((d) => d.id === discussionId);
-    if (!disc) return;
-
-    this.discussions = this.discussions.filter((d) => d.id !== discussionId);
-    this.comments = this.comments.filter((c) => c.discussionId !== discussionId);
-
-    const ch = this.chapters.find((c) => c.id === disc.chapterId);
-    if (ch && ch.discussionsCount > 0) {
-      ch.discussionsCount -= 1;
-      this.saveToStorage(STORAGE_KEYS.CHAPTERS, this.chapters);
-    }
-
-    this.saveToStorage(STORAGE_KEYS.DISCUSSIONS, this.discussions);
-    this.saveToStorage(STORAGE_KEYS.COMMENTS, this.comments);
-
-    this.addModerationLog({
-      moderatorName,
-      action: 'حذف موضوع نقاش',
-      target: disc.title,
-      details: 'تم حذف النقاش وتعليقاته المرتبطة',
-    });
+  public setDiscussionLocked(id: string, value: boolean) {
+    return this.act('setDiscussionLocked', { id, value });
   }
 
-  // --- Comments ---
+  public deleteDiscussion(id: string) {
+    return this.act('deleteDiscussion', { id });
+  }
+
+  // ------------------------------------------------------------ comments
   public getCommentsTree(discussionId: string, sort: 'latest' | 'oldest' | 'active' = 'latest'): Comment[] {
-    const discussionComments = this.comments.filter((c) => c.discussionId === discussionId);
-
-    // Build parent-children map
+    const own = this.state.comments.filter((c) => c.discussionId === discussionId);
     const parents: Comment[] = [];
-    const childrenMap = new Map<string, Comment[]>();
-
-    discussionComments.forEach((c) => {
+    const children = new Map<string, Comment[]>();
+    own.forEach((c) => {
       if (c.parentId) {
-        const arr = childrenMap.get(c.parentId) || [];
+        const arr = children.get(c.parentId) || [];
         arr.push({ ...c, replies: [] });
-        childrenMap.set(c.parentId, arr);
+        children.set(c.parentId, arr);
       } else {
         parents.push({ ...c, replies: [] });
       }
     });
-
-    // Attach children recursively
-    const attachChildren = (parent: Comment) => {
-      const children = childrenMap.get(parent.id) || [];
-      children.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      parent.replies = children;
-      children.forEach(attachChildren);
+    const attach = (p: Comment) => {
+      const kids = children.get(p.id) || [];
+      kids.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      p.replies = kids;
+      kids.forEach(attach);
     };
-
-    parents.forEach(attachChildren);
-
-    // Sort top-level parents
-    if (sort === 'active') {
-      parents.sort((a, b) => (b.likes.length + (b.replies?.length || 0)) - (a.likes.length + (a.replies?.length || 0)));
-    } else if (sort === 'oldest') {
-      parents.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    } else {
-      parents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-
+    parents.forEach(attach);
+    const time = (c: Comment) => new Date(c.createdAt).getTime();
+    if (sort === 'active') parents.sort((a, b) => b.likes.length + (b.replies?.length || 0) - (a.likes.length + (a.replies?.length || 0)));
+    else if (sort === 'oldest') parents.sort((a, b) => time(a) - time(b));
+    else parents.sort((a, b) => time(b) - time(a));
     return parents;
   }
 
-  public addComment(params: {
-    discussionId: string;
-    content: string;
-    parentId?: string | null;
-  }): Comment | null {
-    if (!this.currentUser) return null;
-
-    const disc = this.discussions.find((d) => d.id === params.discussionId);
-    if (!disc || disc.isLocked) return null;
-
-    const newComment: Comment = {
-      id: `comm_${Date.now()}`,
-      discussionId: params.discussionId,
-      parentId: params.parentId || null,
-      authorId: this.currentUser.id,
-      authorName: this.currentUser.name,
-      authorAvatar: this.currentUser.avatar,
-      authorRole: this.currentUser.role,
-      content: params.content.trim(),
-      likes: [],
-      createdAt: new Date().toISOString(),
-    };
-
-    this.comments.push(newComment);
-    disc.commentsCount += 1;
-
-    // Increment chapter comment count
-    const ch = this.chapters.find((c) => c.id === disc.chapterId);
-    if (ch) ch.commentsCount += 1;
-
-    this.saveToStorage(STORAGE_KEYS.COMMENTS, this.comments);
-    this.saveToStorage(STORAGE_KEYS.DISCUSSIONS, this.discussions);
-    this.saveToStorage(STORAGE_KEYS.CHAPTERS, this.chapters);
-
-    // Notification handling:
-    // If it's a reply to a comment, notify that comment's author
-    if (params.parentId) {
-      const parentComm = this.comments.find((c) => c.id === params.parentId);
-      if (parentComm && parentComm.authorId !== this.currentUser.id) {
-        this.createNotification({
-          userId: parentComm.authorId,
-          title: 'رد جديد على تعليقك',
-          message: `رد ${this.currentUser.name} على تعليقك في نقاش "${disc.title.slice(0, 35)}..."`,
-          type: 'reply',
-          targetType: 'discussion',
-          targetId: disc.id,
-        });
-      }
-    } else {
-      // Notify discussion author
-      if (disc.authorId !== this.currentUser.id) {
-        this.createNotification({
-          userId: disc.authorId,
-          title: 'تعليق جديد على موضوعك',
-          message: `أضاف ${this.currentUser.name} تعليقاً على نقاشك "${disc.title.slice(0, 35)}..."`,
-          type: 'reply',
-          targetType: 'discussion',
-          targetId: disc.id,
-        });
-      }
-    }
-
-    // Notify other followers
-    disc.followers.forEach((followerId) => {
-      if (followerId !== this.currentUser?.id && followerId !== disc.authorId) {
-        this.createNotification({
-          userId: followerId,
-          title: 'تفاعل جديد في نقاش تتابعه',
-          message: `أُضيف رد جديد في نقاش: "${disc.title.slice(0, 35)}..."`,
-          type: 'follow',
-          targetType: 'discussion',
-          targetId: disc.id,
-        });
-      }
-    });
-
-    return newComment;
+  public addComment(params: { discussionId: string; content: string; parentId?: string | null }) {
+    return this.act<Comment>('addComment', params);
   }
 
-  public editComment(commentId: string, content: string): boolean {
-    const comment = this.comments.find((c) => c.id === commentId);
-    if (!comment) return false;
-    if (this.currentUser?.id !== comment.authorId && this.currentUser?.role !== 'admin') return false;
-
-    comment.content = content.trim();
-    comment.isEdited = true;
-    this.saveToStorage(STORAGE_KEYS.COMMENTS, this.comments);
-    return true;
+  public editComment(id: string, content: string) {
+    return this.act('editComment', { id, content });
   }
 
-  public deleteComment(commentId: string, moderatorName?: string): boolean {
-    const comment = this.comments.find((c) => c.id === commentId);
-    if (!comment) return false;
-
-    const disc = this.discussions.find((d) => d.id === comment.discussionId);
-
-    // Delete comment and any nested direct replies
-    const toDeleteIds = new Set<string>([commentId]);
-    const findChildren = (pid: string) => {
-      this.comments.forEach((c) => {
-        if (c.parentId === pid) {
-          toDeleteIds.add(c.id);
-          findChildren(c.id);
-        }
-      });
-    };
-    findChildren(commentId);
-
-    const deletedCount = toDeleteIds.size;
-    this.comments = this.comments.filter((c) => !toDeleteIds.has(c.id));
-
-    if (disc) {
-      disc.commentsCount = Math.max(0, disc.commentsCount - deletedCount);
-      const ch = this.chapters.find((c) => c.id === disc.chapterId);
-      if (ch) ch.commentsCount = Math.max(0, ch.commentsCount - deletedCount);
-    }
-
-    this.saveToStorage(STORAGE_KEYS.COMMENTS, this.comments);
-    this.saveToStorage(STORAGE_KEYS.DISCUSSIONS, this.discussions);
-    this.saveToStorage(STORAGE_KEYS.CHAPTERS, this.chapters);
-
-    if (moderatorName) {
-      this.addModerationLog({
-        moderatorName,
-        action: 'حذف تعليق',
-        target: comment.authorName,
-        details: `حذف تعليق مخالف في الموضوع: ${disc?.title || ''}`,
-      });
-    }
-
-    return true;
+  public deleteComment(id: string) {
+    return this.act('deleteComment', { id });
   }
 
-  public toggleLikeComment(commentId: string): boolean {
-    if (!this.currentUser) return false;
-    const comment = this.comments.find((c) => c.id === commentId);
-    if (!comment) return false;
-
-    const index = comment.likes.indexOf(this.currentUser.id);
-    let isLikedNow = false;
-
-    if (index >= 0) {
-      comment.likes.splice(index, 1);
-    } else {
-      comment.likes.push(this.currentUser.id);
-      isLikedNow = true;
-    }
-
-    this.saveToStorage(STORAGE_KEYS.COMMENTS, this.comments);
-    return isLikedNow;
+  public toggleLikeComment(id: string) {
+    return this.act<boolean>('toggleLikeComment', { id });
   }
 
-  // --- Reader Articles ---
+  // ------------------------------------------------------------ articles
   public getArticles(status: 'all' | 'approved' | 'pending' | 'rejected' = 'approved'): Article[] {
-    if (status === 'all') {
-      return [...this.articles].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-    return this.articles
-      .filter((a) => a.status === status)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const list = status === 'all' ? [...this.state.articles] : this.state.articles.filter((a) => a.status === status);
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   public getArticleById(id: string): Article | undefined {
-    return this.articles.find((a) => a.id === id);
+    return this.state.articles.find((a) => a.id === id);
   }
 
-  public submitArticle(params: {
-    title: string;
-    category: string;
-    excerpt: string;
-    content: string;
-    coverImage?: string;
-  }): Article | null {
-    if (!this.currentUser) return null;
-
-    const newArticle: Article = {
-      id: `art_${Date.now()}`,
-      title: params.title.trim(),
-      category: params.category,
-      excerpt: params.excerpt.trim(),
-      content: params.content.trim(),
-      coverImage: params.coverImage || '/images/urban_plaza_articles_1794401625775.jpg',
-      authorId: this.currentUser.id,
-      authorName: this.currentUser.name,
-      authorAvatar: this.currentUser.avatar,
-      authorBio: this.currentUser.bio,
-      status: 'pending', // Directly goes to moderation queue!
-      views: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.articles.unshift(newArticle);
-    this.saveToStorage(STORAGE_KEYS.ARTICLES, this.articles);
-
-    this.createNotification({
-      userId: this.currentUser.id,
-      title: 'تم استلام مقالك للمراجعة',
-      message: `تم إرسال مقالك "${newArticle.title}" بنجاح، وسيظهر للمجتمع بعد اعتماده من فريق التحرير.`,
-      type: 'article_status',
-      targetType: 'article',
-      targetId: newArticle.id,
-    });
-
-    return newArticle;
+  public incrementArticleViews(id: string) {
+    if (this.viewed.has(id)) return;
+    this.viewed.add(id);
+    this.act('viewArticle', { id });
   }
 
-  public reviewArticle(
-    articleId: string,
-    status: 'approved' | 'rejected' | 'needs_revision',
-    notes: string,
-    moderatorName: string
-  ) {
-    const article = this.articles.find((a) => a.id === articleId);
-    if (!article) return;
-
-    article.status = status;
-    article.moderatorNotes = notes;
-    if (status === 'approved' && !article.publishedAt) {
-      article.publishedAt = new Date().toISOString();
-    }
-
-    this.saveToStorage(STORAGE_KEYS.ARTICLES, this.articles);
-
-    // Notify author
-    const statusArabic =
-      status === 'approved'
-        ? 'تمت الموافقة على نشر مقالك'
-        : status === 'rejected'
-        ? 'تم رفض نشر المقال'
-        : 'طلب تعديل على مقالك';
-
-    this.createNotification({
-      userId: article.authorId,
-      title: statusArabic,
-      message: `${statusArabic}: "${article.title}". ${notes ? `ملاحظات: ${notes}` : ''}`,
-      type: 'article_status',
-      targetType: 'article',
-      targetId: article.id,
-    });
-
-    this.addModerationLog({
-      moderatorName,
-      action: `مراجعة مقال (${status})`,
-      target: article.title,
-      details: notes || 'تم تحديث حالة النشر',
-    });
+  public submitArticle(params: { title: string; category: string; excerpt: string; content: string; coverImage?: string }) {
+    return this.act<Article>('submitArticle', params);
   }
 
-  // --- Notifications ---
+  public editArticle(id: string, data: Partial<Pick<Article, 'title' | 'category' | 'excerpt' | 'content' | 'coverImage'>>) {
+    return this.act('editArticle', { id, ...data });
+  }
+
+  public deleteArticle(id: string) {
+    return this.act('deleteArticle', { id });
+  }
+
+  public reviewArticle(id: string, status: 'approved' | 'rejected' | 'needs_revision', notes: string) {
+    return this.act('reviewArticle', { id, status, notes });
+  }
+
+  // ------------------------------------------------------------ notifications
   public getNotificationsForUser(userId: string): NotificationItem[] {
-    return this.notifications
+    return this.state.notifications
       .filter((n) => n.userId === userId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   public getUnreadNotificationCount(userId: string): number {
-    return this.notifications.filter((n) => n.userId === userId && !n.isRead).length;
+    return this.state.notifications.filter((n) => n.userId === userId && !n.isRead).length;
   }
 
   public markNotificationAsRead(id: string) {
-    const notif = this.notifications.find((n) => n.id === id);
-    if (!notif) return;
-    notif.isRead = true;
-    this.saveToStorage(STORAGE_KEYS.NOTIFICATIONS, this.notifications);
+    return this.act('markNotificationRead', { id });
   }
 
-  public markAllNotificationsAsRead(userId: string) {
-    this.notifications.forEach((n) => {
-      if (n.userId === userId) n.isRead = true;
-    });
-    this.saveToStorage(STORAGE_KEYS.NOTIFICATIONS, this.notifications);
+  public markAllNotificationsAsRead() {
+    return this.act('markAllNotificationsRead');
   }
 
-  public createNotification(params: Omit<NotificationItem, 'id' | 'isRead' | 'createdAt'>) {
-    const notif: NotificationItem = {
-      ...params,
-      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    };
-    this.notifications.unshift(notif);
-    this.saveToStorage(STORAGE_KEYS.NOTIFICATIONS, this.notifications);
-  }
-
-  // --- Reports & Moderation ---
-  public submitReport(params: {
-    targetType: 'discussion' | 'comment' | 'article';
-    targetId: string;
-    targetTitle: string;
-    reason: string;
-    details: string;
-  }): ReportItem | null {
-    if (!this.currentUser) return null;
-
-    const report: ReportItem = {
-      id: `rep_${Date.now()}`,
-      reporterId: this.currentUser.id,
-      reporterName: this.currentUser.name,
-      targetType: params.targetType,
-      targetId: params.targetId,
-      targetTitle: params.targetTitle,
-      reason: params.reason,
-      details: params.details,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-
-    this.reports.unshift(report);
-    this.saveToStorage(STORAGE_KEYS.REPORTS, this.reports);
-
-    return report;
+  // ------------------------------------------------------------ reports & moderation
+  public submitReport(params: { targetType: 'discussion' | 'comment' | 'article'; targetId: string; targetTitle: string; reason: string; details: string }) {
+    return this.act<ReportItem>('submitReport', params);
   }
 
   public getReports(status: 'all' | 'pending' | 'resolved' = 'all'): ReportItem[] {
-    if (status === 'all') return [...this.reports];
-    return this.reports.filter((r) => r.status === status);
+    return status === 'all' ? [...this.state.reports] : this.state.reports.filter((r) => r.status === status);
   }
 
-  public resolveReport(reportId: string, resolution: string, moderatorName: string, status: 'resolved' | 'dismissed') {
-    const report = this.reports.find((r) => r.id === reportId);
-    if (!report) return;
-
-    report.status = status;
-    report.resolution = resolution;
-    this.saveToStorage(STORAGE_KEYS.REPORTS, this.reports);
-
-    // Notify reporter
-    this.createNotification({
-      userId: report.reporterId,
-      title: 'تحديث بشأن بلاغك',
-      message: `تم التعامل مع بلاغك حول "${report.targetTitle}": ${resolution}`,
-      type: 'report_action',
-    });
-
-    this.addModerationLog({
-      moderatorName,
-      action: status === 'resolved' ? 'معالجة بلاغ' : 'تجاهل بلاغ',
-      target: report.targetTitle,
-      details: resolution,
-    });
+  public resolveReport(id: string, resolution: string, status: 'resolved' | 'dismissed') {
+    return this.act('resolveReport', { id, resolution, status });
   }
 
   public getModerationLogs(): ModerationAction[] {
-    return [...this.moderationLog].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return [...this.state.moderationLog].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 
-  private addModerationLog(log: Omit<ModerationAction, 'id' | 'timestamp'>) {
-    const item: ModerationAction = {
-      ...log,
-      id: `mod_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-    };
-    this.moderationLog.unshift(item);
-    this.saveToStorage(STORAGE_KEYS.MODERATION_LOG, this.moderationLog);
-  }
-
-  // --- Admin Stats ---
   public getAdminStats() {
+    const { users, discussions, comments, articles, reports } = this.state;
     return {
-      totalUsers: this.users.length,
-      activeUsers: this.users.filter((u) => u.status === 'active').length,
-      totalDiscussions: this.discussions.length,
-      totalComments: this.comments.length,
-      publishedArticles: this.articles.filter((a) => a.status === 'approved').length,
-      pendingArticles: this.articles.filter((a) => a.status === 'pending').length,
-      openReports: this.reports.filter((r) => r.status === 'pending').length,
-      totalViews: this.discussions.reduce((sum, d) => sum + d.views, 0) + this.articles.reduce((sum, a) => sum + a.views, 0),
+      totalUsers: users.length,
+      activeUsers: users.filter((u) => u.status === 'active').length,
+      totalDiscussions: discussions.length,
+      totalComments: comments.length,
+      publishedArticles: articles.filter((a) => a.status === 'approved').length,
+      pendingArticles: articles.filter((a) => a.status === 'pending').length,
+      openReports: reports.filter((r) => r.status === 'pending').length,
+      totalViews: discussions.reduce((s, d) => s + d.views, 0) + articles.reduce((s, a) => s + a.views, 0),
     };
   }
 
-  // --- Site Settings ---
+  // ------------------------------------------------------------ site settings
   public getSiteSettings(): SiteSettings {
-    return { ...this.siteSettings };
+    return { ...this.state.settings };
   }
 
-  public updateSiteSettings(settings: Partial<SiteSettings>, moderatorName: string): Promise<boolean> {
-    this.siteSettings = { ...this.siteSettings, ...settings };
-    this.saveToStorage(STORAGE_KEYS.SITE_SETTINGS, this.siteSettings);
-    const saved = this.pushSharedContent({ settings });
-
-    this.addModerationLog({
-      moderatorName,
-      action: 'تحديث إعدادات الموقع',
-      target: 'إعدادات المنصة',
-      details: 'تم تعديل البيانات التعريفية أو نصوص الصفحة الرئيسية',
-    });
-    return saved;
+  public updateSiteSettings(settings: Partial<SiteSettings>) {
+    return this.act('updateSettings', { settings });
   }
 }
 
