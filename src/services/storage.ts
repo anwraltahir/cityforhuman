@@ -18,6 +18,7 @@ import {
   ReportItem,
   ModerationAction,
   SiteSettings,
+  BookAvailability,
   UserRole,
 } from '../types';
 import { INITIAL_CHAPTERS, INITIAL_SITE_SETTINGS } from '../data/initialData';
@@ -33,6 +34,7 @@ interface ServerState {
   reports: ReportItem[];
   moderationLog: ModerationAction[];
   settings: SiteSettings;
+  availability?: BookAvailability;
   importedLocal: boolean;
 }
 
@@ -480,6 +482,16 @@ class DataStore {
 
   public updateSiteSettings(settings: Partial<SiteSettings>) {
     return this.act('updateSettings', { settings });
+  }
+
+  // ------------------------------------------------------------ where to get the book
+  public getAvailability(): BookAvailability {
+    const av = this.state.availability;
+    return { paper: av?.paper ? [...av.paper] : [], digital: av?.digital ? [...av.digital] : [] };
+  }
+
+  public updateAvailability(availability: BookAvailability) {
+    return this.act('updateAvailability', { availability });
   }
 }
 

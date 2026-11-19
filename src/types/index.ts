@@ -129,3 +129,27 @@ export interface SiteSettings {
   officialDomain: string;
   contactEmail: string;
 }
+
+/** A bookstore that sells the printed edition. */
+export interface BookStore {
+  id: string;
+  country: string;
+  city?: string;
+  name: string;
+  address?: string;
+  phone?: string;
+  mapUrl?: string;
+}
+
+/** An online store selling the digital edition. */
+export interface DigitalStore {
+  id: string;
+  name: string;
+  url: string;
+}
+
+/** Where readers can get the book; managed from the admin panel. */
+export interface BookAvailability {
+  paper: BookStore[];
+  digital: DigitalStore[];
+}

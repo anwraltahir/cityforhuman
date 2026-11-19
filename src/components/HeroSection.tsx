@@ -4,8 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { BookOpen, MessageSquare, ArrowLeft, Compass, Users, BellRing } from 'lucide-react';
+import { BookOpen, MessageSquare, ArrowLeft, Compass, Users, BellRing, RotateCcw, ShoppingBag, CheckCircle2 } from 'lucide-react';
 import { InterestModal } from './InterestModal';
+import { GetBookModal } from './GetBookModal';
 import { store } from '../services/storage';
 
 interface HeroSectionProps {
@@ -20,7 +21,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onSelectChapter,
 }) => {
   const [interestOpen, setInterestOpen] = useState(false);
+  const [bookFlipped, setBookFlipped] = useState(false);
+  const [getBookOpen, setGetBookOpen] = useState(false);
   const settings = store.getSiteSettings();
+  const availability = store.getAvailability();
+  const isAvailable = availability.paper.length > 0 || availability.digital.length > 0;
   return (
     <section className="relative overflow-hidden pt-8 pb-16 lg:py-20 border-b border-[#E8E2D6] bg-gradient-to-b from-[#FAF8F5] via-[#FAF8F5] to-[#F3EDE3]/40">
       {/* Subtle architectural backdrop lines */}
@@ -66,11 +71,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               </button>
 
               <button
-                onClick={onDiscoverBook}
+                onClick={() => setGetBookOpen(true)}
                 className="px-6 py-3.5 bg-[#FAF8F5] hover:bg-[#EFE9DF] text-stone-800 font-bold text-sm sm:text-base rounded-xl border border-[#D5CCBE] transition-all flex items-center gap-2.5 cursor-pointer"
               >
-                <BookOpen className="w-5 h-5 text-[#A99C8A]" />
-                <span>اكتشف الكتاب وفصوله</span>
+                <ShoppingBag className="w-5 h-5 text-[#A99C8A]" />
+                <span>احصل على الكتاب</span>
+                {!isAvailable && (
+                  <span className="text-[11px] font-bold text-[#E84200] bg-[#E84200]/10 px-2 py-0.5 rounded-full">قريباً</span>
+                )}
               </button>
             </div>
 
@@ -99,59 +107,47 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
               {/* Book presentation: front cover only, styled as a physical book */}
               <div className="relative pt-4 pb-8 flex flex-col items-center">
-                <div className="relative w-[230px] sm:w-[280px]" style={{ perspective: '1400px' }}>
-                  <div
-                    className="relative transition-transform duration-500 ease-out [transform:rotateY(10deg)_rotateX(2deg)] group-hover:[transform:rotateY(3deg)]"
-                    style={{ transformStyle: 'preserve-3d' }}
+                <div className="relative">
+                  {/* 3D book: front, spine and page edges (styles in index.css, .book3d) */}
+                  <button
+                    type="button"
+                    className="book3d__toggle"
+                    onClick={() => setBookFlipped((f) => !f)}
+                    aria-label={bookFlipped ? 'عرض الغلاف الأمامي' : 'عرض الغلاف الخلفي'}
                   >
-                    {/* Page edges peeking out on the open (left) side */}
-                    <div
-                      aria-hidden="true"
-                      className="absolute top-[6px] bottom-[6px] -left-[9px] w-[30px] rounded-l-sm"
-                      style={{
-                        background: 'repeating-linear-gradient(90deg, #fdfbf7 0 2px, #e4ddd0 2px 3px)',
-                        boxShadow: 'inset 4px 0 6px rgba(0,0,0,0.08)',
-                      }}
-                    />
-
-                    {/* Front cover (shows only the front part of a full wrap-around cover) */}
-                    <div className="relative aspect-[2/3] overflow-hidden rounded-l-md rounded-r-[3px] bg-[#8c9a87] shadow-[0_25px_45px_-12px_rgba(40,30,20,0.55),0_8px_16px_-6px_rgba(40,30,20,0.35)]">
-                      <img
-                        src="/cover/front"
-                        alt="غلاف كتاب مدن الإنسان - عثمان الطيب"
-                        className="absolute inset-0 w-full h-full object-cover object-left"
-                        referrerPolicy="no-referrer"
-                      />
-                      {/* Spine hinge on the right edge */}
-                      <div
-                        aria-hidden="true"
-                        className="absolute inset-y-0 right-0 w-[14%]"
-                        style={{
-                          background:
-                            'linear-gradient(to left, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.12) 18%, rgba(255,255,255,0.28) 26%, rgba(0,0,0,0.10) 38%, transparent 100%)',
-                        }}
-                      />
-                      {/* Soft light sheen */}
-                      <div
-                        aria-hidden="true"
-                        className="absolute inset-0 pointer-events-none"
-                        style={{ background: 'linear-gradient(115deg, rgba(255,255,255,0.22) 0%, transparent 38%, transparent 70%, rgba(0,0,0,0.10) 100%)' }}
-                      />
+                  <div className="book3d" style={{ ['--cover' as string]: "url('/cover/front')" }}>
+                    <div className={`book3d__inner${bookFlipped ? ' is-flipped' : ''}`}>
+                      <div className="book3d__face book3d__back" />
+                      <div className="book3d__face book3d__bottom" />
+                      <div className="book3d__face book3d__top" />
+                      <div className="book3d__face book3d__pages" />
+                      <div className="book3d__face book3d__spine" />
+                      <div className="book3d__face book3d__front">
+                        <img src="/cover/front" alt="غلاف كتاب مدن الإنسان - عثمان الطيب" referrerPolicy="no-referrer" />
+                      </div>
                     </div>
+                    <div className="book3d__shadow" aria-hidden="true" />
                   </div>
+                  </button>
 
                   {/* Coming soon badge */}
-                  <span className="absolute -top-3 -right-4 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold text-white bg-[#E84200] rounded-full shadow-lg">
-                    <BellRing className="w-3.5 h-3.5" />
-                    قريباً في المكتبات
+                  <span className="absolute -top-3 -right-3 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold text-white bg-[#E84200] rounded-full shadow-lg">
+                    {isAvailable ? <CheckCircle2 className="w-3.5 h-3.5" /> : <BellRing className="w-3.5 h-3.5" />}
+                    {isAvailable ? 'متوفر الآن' : 'قريباً في المكتبات'}
                   </span>
-
-                  {/* Ground shadow */}
-                  <div aria-hidden="true" className="absolute -bottom-5 left-[8%] right-[8%] h-6 rounded-[50%] bg-stone-900/25 blur-md" />
                 </div>
 
+                <button
+                  type="button"
+                  onClick={() => setBookFlipped((f) => !f)}
+                  className="mt-9 inline-flex items-center gap-1.5 text-xs font-semibold text-[#268F0C] hover:underline cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  {bookFlipped ? 'اضغط لعرض الغلاف الأمامي' : 'اضغط على الكتاب لعرض الغلاف الخلفي'}
+                </button>
+
                 {/* Quiet caption underneath */}
-                <div className="mt-9 text-center text-xs text-stone-600 space-y-1">
+                <div className="mt-3 text-center text-xs text-stone-600 space-y-1">
                   <p>
                     <span className="font-bold text-stone-800">دار كنعان للدراسات والنشر</span>
                     <span className="text-stone-300 mx-2">·</span>
@@ -163,54 +159,37 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 </div>
               </div>
 
-              {/* Pre-launch call to action */}
+              {/* Call to action: pre-launch interest, or where to buy once available */}
               <div className="relative mt-4 p-4 rounded-2xl bg-white border border-[#E5DECF] shadow-sm flex flex-col sm:flex-row items-center gap-3 sm:justify-between text-center sm:text-right">
                 <div>
-                  <p className="text-base font-extrabold text-stone-900">قريباً في المكتبات</p>
-                  <p className="text-xs text-stone-500 mt-0.5">كن أول من يعلم عند صدور الكتاب</p>
+                  <p className="text-base font-extrabold text-stone-900">{isAvailable ? 'الكتاب متوفر الآن' : 'قريباً في المكتبات'}</p>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    {isAvailable ? 'النسخة الورقية في المكتبات والنسخة الرقمية عبر المتاجر' : 'كن أول من يعلم عند صدور الكتاب'}
+                  </p>
                 </div>
                 <button
-                  onClick={() => setInterestOpen(true)}
+                  onClick={() => (isAvailable ? setGetBookOpen(true) : setInterestOpen(true))}
                   className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white bg-[#E84200] hover:bg-[#C93900] rounded-xl shadow-md transition-colors cursor-pointer"
                 >
-                  <BellRing className="w-4 h-4" />
-                  سجّل اهتمامك
+                  {isAvailable ? <ShoppingBag className="w-4 h-4" /> : <BellRing className="w-4 h-4" />}
+                  {isAvailable ? 'احصل على الكتاب' : 'سجّل اهتمامك'}
                 </button>
               </div>
 
-              {/* Quick Jump Ribbon to Popular Chapters */}
-              <div className="mt-4 bg-white/80 backdrop-blur-xs p-3 rounded-xl border border-[#E5DECF] flex items-center justify-between gap-2 text-xs">
-                <span className="font-bold text-stone-700 flex items-center gap-1.5 shrink-0">
-                  <Compass className="w-3.5 h-3.5 text-[#268F0C]" />
-                  <span>ابرز الفصول:</span>
-                </span>
-                <div className="flex items-center gap-2 overflow-x-auto pb-0.5 min-w-0">
-                  <button
-                    onClick={() => onSelectChapter(8)}
-                    className="hover:text-[#268F0C] font-semibold text-stone-600 whitespace-nowrap cursor-pointer"
-                  >
-                    ٨. مدن الإنسان
-                  </button>
-                  <span className="text-stone-300">·</span>
-                  <button
-                    onClick={() => onSelectChapter(1)}
-                    className="hover:text-[#268F0C] font-semibold text-stone-600 whitespace-nowrap cursor-pointer"
-                  >
-                    ١. الطرق السريعة
-                  </button>
-                  <span className="text-stone-300">·</span>
-                  <button
-                    onClick={() => onSelectChapter(6)}
-                    className="hover:text-[#268F0C] font-semibold text-stone-600 whitespace-nowrap cursor-pointer"
-                  >
-                    ٦. سادة وأوباش
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </div>
+      {getBookOpen && (
+        <GetBookModal
+          availability={availability}
+          onClose={() => setGetBookOpen(false)}
+          onRegisterInterest={() => {
+            setGetBookOpen(false);
+            setInterestOpen(true);
+          }}
+        />
+      )}
       {interestOpen && <InterestModal onClose={() => setInterestOpen(false)} />}
     </section>
   );

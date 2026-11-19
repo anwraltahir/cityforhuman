@@ -16,20 +16,20 @@ const arabicNumerals = ['٠١', '٠٢', '٠٣', '٠٤', '٠٥', '٠٦', '٠٧', 
 
 export const ChaptersGrid: React.FC<ChaptersGridProps> = ({ chapters, onSelectChapter }) => {
   return (
-    <section id="chapters" className="py-16 lg:py-24 border-b border-[#E8E2D6] bg-[#F7F4EE]">
+    <section id="chapters" className="py-12 lg:py-20 min-h-[70vh] bg-[#F7F4EE]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-right max-w-3xl mb-12 space-y-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-[#268F0C]">
             <Layers className="w-4 h-4" />
-            <span>فهرس الموضوعات والمناقشات</span>
+            <span>فهرس الكتاب</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight">
             فصول كتاب «مدن الإنسان»
-          </h2>
+          </h1>
           <p className="text-stone-600 text-base sm:text-lg leading-relaxed">
-            يحتوي الكتاب على عشرة فصول تأسيسية، لكل منها منتدى حواري مستقل يتيح للقراء تبادل
-            الآراء، طرح الأسئلة، ومشاركة التجارب الميدانية من مدنهم.
+            يحتوي الكتاب على عشرة فصول تأسيسية، تتناول كيف غيّرت السيارات مدننا، وكيف نعيدها
+            للإنسان.
           </p>
         </div>
 
@@ -93,7 +93,7 @@ export const ChaptersGrid: React.FC<ChaptersGridProps> = ({ chapters, onSelectCh
                     onClick={() => onSelectChapter(chapter.id)}
                     className="px-3.5 py-1.5 text-xs font-bold text-stone-800 bg-[#FAF8F5] hover:bg-[#268F0C] hover:text-white rounded-lg border border-[#DDD5C7] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   >
-                    <span>ادخل إلى النقاش</span>
+                    <span>تفاصيل الفصل</span>
                     <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
                   </button>
                 </div>

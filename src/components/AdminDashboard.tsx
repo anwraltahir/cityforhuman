@@ -9,6 +9,7 @@ import { store, ActResult } from '../services/storage';
 import { useToast } from './Toast';
 import { CoverManager } from './CoverManager';
 import { InterestList } from './InterestList';
+import { AvailabilityManager } from './AvailabilityManager';
 import {
   X,
   LayoutDashboard,
@@ -34,6 +35,7 @@ import {
   Save,
   Menu,
   BellRing,
+  ShoppingBag,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -52,6 +54,7 @@ type TabType =
   | 'reports'
   | 'settings'
   | 'interest'
+  | 'availability'
   | 'logs';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -354,6 +357,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
 
             <button
+              onClick={() => setActiveTab('availability')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                activeTab === 'availability'
+                  ? 'bg-[#268F0C] text-white shadow-xs'
+                  : 'text-stone-600 hover:bg-[#FAF8F5] hover:text-stone-900'
+              }`}
+            >
+              <span>أماكن توفر الكتاب</span>
+              <ShoppingBag className="w-4 h-4" />
+            </button>
+
+            <button
               onClick={() => setActiveTab('interest')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                 activeTab === 'interest'
@@ -411,6 +426,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'reports' && 'مركز البلاغات والمشاركات المخالفة'}
               {activeTab === 'settings' && 'إعدادات المنصة والبيانات التعريفية'}
               {activeTab === 'interest' && 'المسجّلون للإعلام عند صدور الكتاب'}
+              {activeTab === 'availability' && 'أماكن توفر الكتاب: المكتبات والمتاجر الرقمية'}
               {activeTab === 'logs' && 'سجل الرقابة والإجراءات الإدارية'}
             </h1>
           </div>
@@ -1044,6 +1060,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* TAB 8: AUDIT LOGS */}
           {activeTab === 'interest' && <InterestList />}
+          {activeTab === 'availability' && <AvailabilityManager />}
 
           {activeTab === 'logs' && (
             <div className="bg-white rounded-2xl border border-[#E5DDD0] p-6 shadow-2xs space-y-3">

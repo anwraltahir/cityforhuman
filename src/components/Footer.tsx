@@ -17,7 +17,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPrivacy, onOpe
   return (
     <footer className="bg-[#1C1917] text-stone-300 pt-16 pb-12 border-t border-stone-800 text-right">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-stone-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-stone-800">
           {/* Brand & Mission (2 cols) */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
@@ -104,19 +104,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPrivacy, onOpe
                   عن المؤلف عثمان الطيب
                 </button>
               </li>
-            </ul>
-          </div>
-
-          {/* Chapters Spotlight (1 col) */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">من الفصول</h4>
-            <ul className="space-y-2 text-xs text-stone-400">
-              <li>١. الطرق السريعة</li>
-              <li>٢. زحام المدن</li>
-              <li>٣. العمران والطبيعة</li>
-              <li>٦. سادة وأوباش</li>
-              <li>٨. مدن الإنسان</li>
-              <li>١٠. أعلام مدن الإنسان</li>
             </ul>
           </div>
 

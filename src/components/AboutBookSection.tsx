@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { BookOpen, Layers, CheckCircle, ArrowDown, MapPin, Sparkles } from 'lucide-react';
+import { BookOpen, Layers, CheckCircle, ArrowLeft, MapPin, Sparkles } from 'lucide-react';
 
 interface AboutBookSectionProps {
   onExploreChapters: () => void;
@@ -17,16 +17,12 @@ export const AboutBookSection: React.FC<AboutBookSectionProps> = ({ onExploreCha
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           {/* Architectural visual showcase & Full Book Jacket */}
           <div className="lg:col-span-5 order-2 lg:order-1 space-y-4">
-            <div className="relative rounded-2xl overflow-hidden border border-[#DDD5C7] shadow-lg bg-[#F4EFEA]">
-              <img
-                src="/cover/official"
-                alt="غلاف كتاب مدن الإنسان الكامل (الأمامي والخلفي)"
-                className="w-full h-auto object-cover"
-                referrerPolicy="no-referrer"
-              />
-              <div className="p-4 bg-white/95 backdrop-blur-xs border-t border-[#E8E2D6] text-right">
+            {/* Back-cover blurb (the cover itself is shown as the 3D book at the top of the page) */}
+            <div className="relative rounded-2xl overflow-hidden border border-[#DDD5C7] shadow-sm bg-white">
+              <div className="absolute top-0 right-0 w-1.5 h-full bg-[#268F0C]" />
+              <div className="p-5 sm:p-6 text-right">
                 <p className="text-xs text-stone-500 font-semibold mb-1">كلمة الغلاف الخلفي للكتاب</p>
-                <p className="text-xs sm:text-sm font-bold text-stone-800 leading-relaxed">
+                <p className="text-sm sm:text-base font-bold text-stone-800 leading-loose">
                   «لم تعد المدن تُقام من أجل الإنسان، بل صارت ممرات مزعجة للسيارات، وفقدت ذلك الألق الذي ميّز المدن العريقة ذات الأحياء الحميمة والدروب العامرة، فقد كانت المدن تُبنى للإنسان، وتُخطط على وقع خطواته...»
                 </p>
                 <span className="block text-xs font-semibold text-[#268F0C] mt-2">
@@ -107,8 +103,8 @@ export const AboutBookSection: React.FC<AboutBookSectionProps> = ({ onExploreCha
                 className="px-6 py-3 bg-stone-900 hover:bg-stone-800 text-white font-bold text-sm rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-xs"
               >
                 <Layers className="w-4 h-4 text-[#C1E2B9]" />
-                <span>استعراض الفصول العشرة وبدء النقاش</span>
-                <ArrowDown className="w-4 h-4" />
+                <span>استعراض فصول الكتاب</span>
+                <ArrowLeft className="w-4 h-4" />
               </button>
             </div>
           </div>

@@ -43,7 +43,7 @@ function MainApp() {
   const [ready, setReady] = useState(() => store.isReady());
 
   // Views & Routing State
-  const [viewMode, setViewMode] = useState<'main' | 'chapter_detail' | 'discussion_detail' | 'article_detail'>('main');
+  const [viewMode, setViewMode] = useState<'main' | 'chapters' | 'chapter_detail' | 'discussion_detail' | 'article_detail'>('main');
   const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
   const [selectedDiscussionId, setSelectedDiscussionId] = useState<string | null>(null);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
@@ -85,6 +85,11 @@ function MainApp() {
   // Navigation handlers
   const handleNavigateSection = (sectionId: string) => {
     setActiveNavSection(sectionId);
+    // The chapters index is its own page, not a section of the home page
+    if (sectionId === 'chapters') {
+      setViewMode('chapters');
+      return;
+    }
     if (viewMode !== 'main') {
       setViewMode('main');
       setTimeout(() => {
@@ -109,6 +114,7 @@ function MainApp() {
 
   const handleSelectChapter = (chapterId: number) => {
     setSelectedChapterId(chapterId);
+    setActiveNavSection('chapters');
     setViewMode('chapter_detail');
   };
 
@@ -196,8 +202,6 @@ function MainApp() {
 
             <AboutBookSection onExploreChapters={() => handleNavigateSection('chapters')} />
 
-            <ChaptersGrid chapters={chapters} onSelectChapter={handleSelectChapter} />
-
             <RecentDiscussions
               discussions={discussions}
               chapters={chapters}
@@ -216,10 +220,12 @@ function MainApp() {
           </>
         )}
 
+        {viewMode === 'chapters' && <ChaptersGrid chapters={chapters} onSelectChapter={handleSelectChapter} />}
+
         {viewMode === 'chapter_detail' && selectedChapter && (
           <ChapterDetailView
             chapter={selectedChapter}
-            onBack={() => setViewMode('main')}
+            onBack={() => handleNavigateSection('chapters')}
             onGoToDiscussions={() => handleNavigateSection('discussions')}
           />
         )}

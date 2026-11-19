@@ -17,6 +17,7 @@ import type {
   ModerationAction,
   SiteSettings,
   UserRole,
+  BookAvailability,
 } from '../src/types';
 import {
   INITIAL_CHAPTERS,
@@ -41,6 +42,7 @@ export interface DB {
   reports: ReportItem[];
   moderationLog: ModerationAction[];
   settings: SiteSettings;
+  availability?: BookAvailability;
 }
 
 export class ActionError extends Error {
@@ -68,6 +70,17 @@ const imageUrl = (v: unknown) => {
   const s = String(v ?? '').trim();
   if (!s) return undefined;
   if (s.length > 1000 || !/^(https?:\/\/|\/)[^\s"'<>]+$/.test(s)) throw new ActionError('رابط الصورة غير صالح');
+  return s;
+};
+
+/** Optional external link: http(s) only. */
+const linkUrl = (v: unknown, label: string, required = false) => {
+  const s = String(v ?? '').trim();
+  if (!s) {
+    if (required) throw new ActionError(`يرجى كتابة ${label}`);
+    return undefined;
+  }
+  if (s.length > 1000 || !/^https?:\/\/[^\s"'<>]+$/.test(s)) throw new ActionError(`${label} غير صالح، يجب أن يبدأ بـ https://`);
   return s;
 };
 
@@ -180,6 +193,7 @@ export class Engine {
       reports: priv ? db.reports : [],
       moderationLog: priv ? db.moderationLog : [],
       settings: db.settings,
+      availability: db.availability || { paper: [], digital: [] },
       importedLocal: db.importedLocal,
     };
   }
@@ -374,6 +388,28 @@ export class Engine {
         const fields: (keyof SiteSettings)[] = ['bookTitle', 'bookSubtitle', 'authorName', 'authorBio', 'communityIntro', 'officialDomain', 'contactEmail'];
         for (const f of fields) if (s[f] !== undefined) (this.db.settings as unknown as Record<string, string>)[f] = str(s[f], 3000, 'الحقل', false);
         this.log(mod, 'تحديث إعدادات الموقع', 'إعدادات المنصة', 'تم تعديل البيانات التعريفية أو نصوص الصفحة الرئيسية');
+        return true;
+      }
+
+      case 'updateAvailability': {
+        const mod = this.needMod(actor);
+        const av = (a.availability || {}) as Partial<BookAvailability>;
+        const paper = (Array.isArray(av.paper) ? av.paper : []).slice(0, 300).map((p) => ({
+          id: str(p?.id, 60, 'المعرف', false) || newId('store'),
+          country: str(p?.country, 80, 'الدولة'),
+          city: str(p?.city, 80, 'المدينة', false) || undefined,
+          name: str(p?.name, 150, 'اسم المكتبة'),
+          address: str(p?.address, 300, 'العنوان', false) || undefined,
+          phone: str(p?.phone, 40, 'الهاتف', false) || undefined,
+          mapUrl: linkUrl(p?.mapUrl, 'رابط الخريطة'),
+        }));
+        const digital = (Array.isArray(av.digital) ? av.digital : []).slice(0, 50).map((d) => ({
+          id: str(d?.id, 60, 'المعرف', false) || newId('shop'),
+          name: str(d?.name, 100, 'اسم المتجر'),
+          url: linkUrl(d?.url, 'رابط المتجر', true)!,
+        }));
+        this.db.availability = { paper, digital };
+        this.log(mod, 'تحديث أماكن توفر الكتاب', 'الحصول على الكتاب', `${paper.length} مكتبة · ${digital.length} متجر رقمي`);
         return true;
       }
 
