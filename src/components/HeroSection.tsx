@@ -97,33 +97,69 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               {/* Soft atmospheric book shadow */}
               <div className="absolute -inset-2 bg-gradient-to-tr from-[#C1E2B9]/30 via-[#E84200]/10 to-transparent rounded-2xl filter blur-xl opacity-75 group-hover:opacity-100 transition-opacity" />
 
-              {/* Book frame container */}
-              <div className="relative bg-[#F4EFEA] p-3 rounded-2xl border border-[#DDD5C7] shadow-xl transition-transform group-hover:scale-[1.01] duration-300">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#E8E2D6] text-xs">
-                  <span className="font-bold text-stone-800 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#268F0C]"></span>
-                    <span>الغلاف الأصلي المعتمد</span>
-                  </span>
-                  <span className="text-[11px] text-stone-500">دار كنعان للدراسات والنشر</span>
-                </div>
+              {/* Book presentation: front cover only, styled as a physical book */}
+              <div className="relative pt-4 pb-8 flex flex-col items-center">
+                <div className="relative w-[230px] sm:w-[280px]" style={{ perspective: '1400px' }}>
+                  <div
+                    className="relative transition-transform duration-500 ease-out [transform:rotateY(10deg)_rotateX(2deg)] group-hover:[transform:rotateY(3deg)]"
+                    style={{ transformStyle: 'preserve-3d' }}
+                  >
+                    {/* Page edges peeking out on the open (left) side */}
+                    <div
+                      aria-hidden="true"
+                      className="absolute top-[6px] bottom-[6px] -left-[9px] w-[30px] rounded-l-sm"
+                      style={{
+                        background: 'repeating-linear-gradient(90deg, #fdfbf7 0 2px, #e4ddd0 2px 3px)',
+                        boxShadow: 'inset 4px 0 6px rgba(0,0,0,0.08)',
+                      }}
+                    />
 
-                <div className="relative overflow-hidden rounded-xl bg-[#C1E2B9]/30">
-                  <span className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold text-white bg-[#E84200] rounded-full shadow-lg">
+                    {/* Front cover (shows only the front part of a full wrap-around cover) */}
+                    <div className="relative aspect-[2/3] overflow-hidden rounded-l-md rounded-r-[3px] bg-[#8c9a87] shadow-[0_25px_45px_-12px_rgba(40,30,20,0.55),0_8px_16px_-6px_rgba(40,30,20,0.35)]">
+                      <img
+                        src="/cover/front"
+                        alt="غلاف كتاب مدن الإنسان - عثمان الطيب"
+                        className="absolute inset-0 w-full h-full object-cover object-left"
+                        referrerPolicy="no-referrer"
+                      />
+                      {/* Spine hinge on the right edge */}
+                      <div
+                        aria-hidden="true"
+                        className="absolute inset-y-0 right-0 w-[14%]"
+                        style={{
+                          background:
+                            'linear-gradient(to left, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.12) 18%, rgba(255,255,255,0.28) 26%, rgba(0,0,0,0.10) 38%, transparent 100%)',
+                        }}
+                      />
+                      {/* Soft light sheen */}
+                      <div
+                        aria-hidden="true"
+                        className="absolute inset-0 pointer-events-none"
+                        style={{ background: 'linear-gradient(115deg, rgba(255,255,255,0.22) 0%, transparent 38%, transparent 70%, rgba(0,0,0,0.10) 100%)' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Coming soon badge */}
+                  <span className="absolute -top-3 -right-4 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold text-white bg-[#E84200] rounded-full shadow-lg">
                     <BellRing className="w-3.5 h-3.5" />
                     قريباً في المكتبات
                   </span>
-                  <img
-                    src="/cover/front"
-                    alt="غلاف كتاب مدن الإنسان - عثمان الطيب"
-                    className="w-full h-auto rounded-xl shadow-md object-contain max-h-[460px] mx-auto"
-                    referrerPolicy="no-referrer"
-                  />
+
+                  {/* Ground shadow */}
+                  <div aria-hidden="true" className="absolute -bottom-5 left-[8%] right-[8%] h-6 rounded-[50%] bg-stone-900/25 blur-md" />
                 </div>
 
                 {/* Quiet caption underneath */}
-                <div className="mt-3 px-1 flex items-center justify-between text-xs text-stone-600">
-                  <span className="font-semibold text-stone-700">ردمك: 978-9933-747-18-3</span>
-                  <span>الموقع الرسمي: <strong className="text-stone-900 font-mono">cityforhuman.com</strong></span>
+                <div className="mt-9 text-center text-xs text-stone-600 space-y-1">
+                  <p>
+                    <span className="font-bold text-stone-800">دار كنعان للدراسات والنشر</span>
+                    <span className="text-stone-300 mx-2">·</span>
+                    <span className="font-semibold text-stone-700 tabular-nums">ردمك: 978-9933-747-18-3</span>
+                  </p>
+                  <p>
+                    الموقع الرسمي: <strong className="text-stone-900 font-mono">cityforhuman.com</strong>
+                  </p>
                 </div>
               </div>
 
