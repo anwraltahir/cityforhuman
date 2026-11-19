@@ -150,6 +150,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPrivacy, onOpe
             <Heart className="w-3 h-3 text-[#E84200] fill-current" />
           </div>
         </div>
+
+        {/* Powered by */}
+        <div className="mt-6 flex justify-center">
+          <a
+            href="https://qdv.qa"
+            target="_blank"
+            rel="noopener"
+            dir="ltr"
+            className="inline-flex items-center gap-2.5 text-[11px] font-semibold tracking-wide text-stone-500 hover:text-stone-300 transition-colors"
+          >
+            <span>Powered by</span>
+            <span className="bg-white rounded-lg px-2 py-1 shadow-xs">
+              <img src="/images/qdv-logo.jpg" alt="Qatar Digital Vision (QDV)" className="h-9 sm:h-10 w-auto" loading="lazy" />
+            </span>
+          </a>
+        </div>
       </div>
     </footer>
   );
