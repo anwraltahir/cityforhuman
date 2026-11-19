@@ -3,10 +3,9 @@ import { ImageUp, RotateCcw } from 'lucide-react';
 import { store } from '../services/storage';
 import { useToast } from './Toast';
 
-const SLOTS = [
-  { id: 'front', label: 'الغلاف في أعلى الصفحة الرئيسية' },
-  { id: 'official', label: 'الغلاف في قسم «عن الكتاب»' },
-] as const;
+// Only the hero's 3D book uses an uploaded cover now. The old 'official' slot (About
+// section image) was removed from the page, so it is no longer offered here.
+const SLOTS = [{ id: 'front', label: 'الغلاف الكامل (الكتاب ثلاثي الأبعاد في أعلى الصفحة الرئيسية)' }] as const;
 
 const MAX_BYTES = 7 * 1024 * 1024;
 
@@ -72,9 +71,13 @@ export const CoverManager: React.FC = () => {
         <p className="text-[11px] text-stone-500 mt-0.5">
           يظهر التغيير لجميع زوار الموقع فوراً. الصيغ المقبولة: JPG أو PNG أو WEBP، بحد أقصى 7 ميجابايت.
         </p>
+        <p className="text-[11px] text-stone-500 mt-1">
+          ارفع الغلاف الكامل المفرود (الوجه الأمامي يساراً، ثم الكعب، ثم الظهر يميناً) بنفس مقاسات الغلاف الحالي، حتى يظهر
+          الوجه والكعب والظهر صحيحين على الكتاب.
+        </p>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid gap-4">
         {SLOTS.map((slot) => (
           <div key={slot.id} className="p-3 bg-[#FAF8F5] border border-[#DDD5C7] rounded-2xl space-y-3">
             <p className="text-xs font-bold text-stone-700">{slot.label}</p>

@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import express, { NextFunction, Request, Response } from 'express';
 import { Engine, ActionError, StoredUser } from './server/engine';
+import { findCountry, normalizeNational, phoneError } from './src/data/countries';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -199,12 +200,16 @@ async function startServer() {
     const clean = (v: unknown, max: number) => String(v ?? '').trim().slice(0, max);
     const name = clean(req.body?.name, 100);
     const email = clean(req.body?.email, 150).toLowerCase();
-    const phone = clean(req.body?.phone, 30).replace(/[^\d+]/g, '');
-    const country = clean(req.body?.country, 60);
+    // All fields are required; the phone is checked against the chosen country's dial code and length
+    const countryInfo = findCountry(clean(req.body?.countryCode, 2).toUpperCase());
+    const national = normalizeNational(clean(req.body?.phone, 30));
     if (!name) return res.status(400).json({ ok: false, error: 'يرجى كتابة الاسم' });
-    if (!email && !phone) return res.status(400).json({ ok: false, error: 'يرجى كتابة البريد الإلكتروني أو رقم الجوال' });
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok: false, error: 'البريد الإلكتروني غير صحيح' });
-    if (phone && !/^\+?\d{7,15}$/.test(phone)) return res.status(400).json({ ok: false, error: 'رقم الجوال غير صحيح' });
+    if (!email) return res.status(400).json({ ok: false, error: 'يرجى كتابة البريد الإلكتروني' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ ok: false, error: 'البريد الإلكتروني غير صحيح' });
+    const phoneProblem = phoneError(countryInfo, national);
+    if (phoneProblem) return res.status(400).json({ ok: false, error: phoneProblem });
+    const phone = `+${countryInfo!.dial}${national}`;
+    const country = countryInfo!.name;
 
     const list = readInterest();
     const dup = list.some((x) => (email && x.email === email) || (phone && x.phone === phone));
