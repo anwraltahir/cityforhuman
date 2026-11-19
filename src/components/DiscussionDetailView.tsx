@@ -397,12 +397,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-stone-400 mt-0.5">
-                  <button
-                    onClick={() => onSelectChapter(discussion.chapterId)}
-                    className="font-bold text-[#268F0C] hover:underline"
-                  >
-                    الفصل {discussion.chapterId}: {chapter?.title}
-                  </button>
+                  <span className="font-bold text-[#268F0C]">نقاش كتاب مدن الإنسان</span>
                   <span>·</span>
                   <span className="tabular-nums">{formatDate(discussion.createdAt)}</span>
                 </div>

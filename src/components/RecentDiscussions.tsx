@@ -31,16 +31,11 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
   onOpenNewDiscussion,
   onSelectChapter,
 }) => {
-  const [selectedChapterId, setSelectedChapterId] = useState<number | 'all'>('all');
   const [sortFilter, setSortFilter] = useState<'latest' | 'active' | 'views'>('latest');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter and sort discussions
   let filtered = [...discussions];
-
-  if (selectedChapterId !== 'all') {
-    filtered = filtered.filter((d) => d.chapterId === selectedChapterId);
-  }
 
   if (searchQuery.trim()) {
     const q = searchQuery.trim().toLowerCase();
@@ -100,7 +95,7 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
               نقاشات القراء والمفكرين
             </h2>
             <p className="text-stone-600 text-sm sm:text-base mt-1">
-              شارك برأيك في أحد فصول الكتاب، أو اطرح تساؤلاً حول واقع مدينتك وكيفية أنسنتها.
+              مساحة واحدة لنقاش كتاب مدن الإنسان كاملاً: شارك برأيك في أفكاره، أو اطرح تساؤلاً حول واقع مدينتك وكيفية أنسنتها.
             </p>
           </div>
 
@@ -128,21 +123,6 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-3 justify-end">
-            {/* Chapter Filter Dropdown */}
-            <select
-              value={selectedChapterId}
-              onChange={(e) => setSelectedChapterId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-              aria-label="تصفية النقاشات حسب الفصل"
-              className="px-3 py-2 bg-[#FAF8F5] border border-[#E0D8CB] rounded-xl text-xs sm:text-sm font-medium text-stone-800 focus:outline-none focus:border-[#268F0C]"
-            >
-              <option value="all">جميع الفصول (١٠ فصول)</option>
-              {chapters.map((ch) => (
-                <option key={ch.id} value={ch.id}>
-                  الفصل {ch.id}: {ch.title}
-                </option>
-              ))}
-            </select>
-
             {/* Sort Filter Buttons (Functional Tabs) */}
             <div className="flex items-center gap-1 p-1 bg-[#FAF8F5] rounded-xl border border-[#E0D8CB]">
               <button
@@ -184,7 +164,7 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
           <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-[#DDD5C7] p-8">
             <MessageSquare className="w-12 h-12 text-stone-300 mx-auto mb-3" />
             <h3 className="text-lg font-bold text-stone-800">لا توجد موضوعات تطابق بحثك حالياً</h3>
-            <p className="text-sm text-stone-500 mt-1">كن أول من يفتتح النقاش ويطرح رؤيته حول هذا الفصل.</p>
+            <p className="text-sm text-stone-500 mt-1">كن أول من يفتتح النقاش ويطرح رؤيته حول الكتاب.</p>
             <button
               onClick={onOpenNewDiscussion}
               className="mt-4 px-4 py-2 bg-[#268F0C] text-white text-xs font-bold rounded-lg cursor-pointer"
@@ -203,16 +183,6 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F2ECE3]">
                   {/* Chapter association & status (Clean unboxed text) */}
                   <div className="flex items-center gap-2 text-xs text-stone-500 flex-wrap">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectChapter(disc.chapterId);
-                      }}
-                      className="font-bold text-[#268F0C] hover:underline"
-                    >
-                      {getChapterTitle(disc.chapterId)}
-                    </button>
-                    <span aria-hidden="true" className="text-stone-300">·</span>
                     <span>{formatDate(disc.createdAt)}</span>
 
                     {disc.isPinned && (

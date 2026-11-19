@@ -101,22 +101,25 @@ function MainApp() {
     }
   };
 
+  // Open detail pages at the top. Runs after the new view has rendered, and jumps
+  // instantly: a smooth scroll started before render gets cut short on phones.
+  useEffect(() => {
+    if (viewMode !== 'main') window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+  }, [viewMode, selectedChapterId, selectedDiscussionId, selectedArticleId]);
+
   const handleSelectChapter = (chapterId: number) => {
     setSelectedChapterId(chapterId);
     setViewMode('chapter_detail');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectDiscussion = (discId: string) => {
     setSelectedDiscussionId(discId);
     setViewMode('discussion_detail');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectArticle = (artId: string) => {
     setSelectedArticleId(artId);
     setViewMode('article_detail');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleOpenNewDiscussion = (chId?: number) => {
@@ -216,10 +219,8 @@ function MainApp() {
         {viewMode === 'chapter_detail' && selectedChapter && (
           <ChapterDetailView
             chapter={selectedChapter}
-            discussions={discussions}
             onBack={() => setViewMode('main')}
-            onSelectDiscussion={handleSelectDiscussion}
-            onOpenNewDiscussion={(chId) => handleOpenNewDiscussion(chId)}
+            onGoToDiscussions={() => handleNavigateSection('discussions')}
           />
         )}
 

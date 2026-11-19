@@ -642,7 +642,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   }
                   className="p-2 bg-white border border-[#DDD5C7] rounded-xl text-xs font-semibold text-stone-800"
                 >
-                  <option value="all">كل الفصول</option>
+                  <option value="all">كل النقاشات</option>
+                  <option value={0}>الكتاب كاملاً</option>
                   {chaptersList.map((c) => (
                     <option key={c.id} value={c.id}>
                       الفصل {c.id}: {c.title}
@@ -659,7 +660,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   >
                     <div>
                       <div className="flex items-center gap-2 text-xs text-stone-400">
-                        <span className="font-bold text-[#268F0C]">الفصل {d.chapterId}</span>
+                        <span className="font-bold text-[#268F0C]">{d.chapterId ? `الفصل ${d.chapterId}` : 'الكتاب كاملاً'}</span>
                         <span>·</span>
                         <span className="text-stone-700 font-semibold">{d.authorName}</span>
                         <span>·</span>
@@ -1102,6 +1103,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 onChange={(e) => setEditingDisc({ ...editingDisc, chapterId: Number(e.target.value) })}
                 className="w-full p-2.5 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-sm text-stone-900"
               >
+                <option value={0}>الكتاب كاملاً</option>
                 {chaptersList.map((ch) => (
                   <option key={ch.id} value={ch.id}>
                     {ch.order}. {ch.title}

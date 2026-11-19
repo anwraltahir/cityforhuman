@@ -380,8 +380,9 @@ export class Engine {
       // ---------- discussions
       case 'createDiscussion': {
         const me = this.needUser(actor);
-        const chapterId = Number(a.chapterId);
-        if (!this.db.chapters.some((c) => c.id === chapterId)) throw new ActionError('اختر فصلاً صحيحاً');
+        // 0 = discussion about the whole book (the default since discussions were unified)
+        const chapterId = Number(a.chapterId ?? 0);
+        if (chapterId !== 0 && !this.db.chapters.some((c) => c.id === chapterId)) throw new ActionError('اختر فصلاً صحيحاً');
         const d: Discussion = {
           id: newId('disc'),
           chapterId,
@@ -413,7 +414,7 @@ export class Engine {
         if (a.imageUrl !== undefined) d.imageUrl = imageUrl(a.imageUrl);
         if (a.chapterId !== undefined && isPrivileged(me)) {
           const chapterId = Number(a.chapterId);
-          if (!this.db.chapters.some((c) => c.id === chapterId)) throw new ActionError('اختر فصلاً صحيحاً');
+          if (chapterId !== 0 && !this.db.chapters.some((c) => c.id === chapterId)) throw new ActionError('اختر فصلاً صحيحاً');
           d.chapterId = chapterId;
         }
         d.updatedAt = now();
@@ -453,7 +454,7 @@ export class Engine {
         const mod = this.needMod(actor);
         const d = this.disc(a.id);
         d.isPinned = !!a.value;
-        this.log(mod, d.isPinned ? 'تثبيت نقاش' : 'إلغاء تثبيت نقاش', d.title, `تم ${d.isPinned ? 'تثبيت' : 'إلغاء تثبيت'} الموضوع في الفصل ${d.chapterId}`);
+        this.log(mod, d.isPinned ? 'تثبيت نقاش' : 'إلغاء تثبيت نقاش', d.title, `تم ${d.isPinned ? 'تثبيت' : 'إلغاء تثبيت'} الموضوع: ${d.title}`);
         return true;
       }
       case 'setDiscussionLocked': {

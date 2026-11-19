@@ -23,7 +23,6 @@ export const NewDiscussionModal: React.FC<NewDiscussionModalProps> = ({
   onSuccess,
 }) => {
   const { showToast } = useToast();
-  const [chapterId, setChapterId] = useState<number>(defaultChapterId || 1);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -39,7 +38,7 @@ export const NewDiscussionModal: React.FC<NewDiscussionModalProps> = ({
 
     setIsSubmitting(true);
     const res = await store.createDiscussion({
-      chapterId,
+      chapterId: 0, // whole book
       title,
       content,
       imageUrl: imageUrl.trim() || undefined,
@@ -74,24 +73,6 @@ export const NewDiscussionModal: React.FC<NewDiscussionModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          {/* Chapter Selector */}
-          <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1.5">
-              اختر الفصل المرتبط بالنقاش <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={chapterId}
-              onChange={(e) => setChapterId(Number(e.target.value))}
-              className="w-full p-3 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-xs sm:text-sm font-semibold text-stone-900 focus:outline-none focus:border-[#268F0C]"
-            >
-              {chapters.map((ch) => (
-                <option key={ch.id} value={ch.id}>
-                  الفصل {ch.id}: {ch.title} — ({ch.subtitle})
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Title */}
           <div>
             <label className="block text-xs font-bold text-stone-700 mb-1.5">

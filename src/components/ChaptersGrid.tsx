@@ -87,17 +87,7 @@ export const ChaptersGrid: React.FC<ChaptersGridProps> = ({ chapters, onSelectCh
 
                 {/* Footer Metrics & CTA Button */}
                 <div className="mt-6 pt-4 border-t border-[#F0EAE1] flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-xs text-stone-500 tabular-nums">
-                    <span className="flex items-center gap-1" title="موضوعات النقاش">
-                      <MessageSquare className="w-3.5 h-3.5 text-stone-400" />
-                      <span>{chapter.discussionsCount}</span>
-                    </span>
-                    <span className="text-stone-300">·</span>
-                    <span className="flex items-center gap-1" title="إجمالي المشاركات">
-                      <MessagesSquare className="w-3.5 h-3.5 text-stone-400" />
-                      <span>{chapter.commentsCount}</span>
-                    </span>
-                  </div>
+                  <span />
 
                   <button
                     onClick={() => onSelectChapter(chapter.id)}
