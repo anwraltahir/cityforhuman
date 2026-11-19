@@ -76,7 +76,7 @@ export const InterestModal: React.FC<InterestModalProps> = ({ onClose }) => {
             <div className="pl-8">
               <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#E84200] bg-[#E84200]/10 px-2.5 py-1 rounded-full">
                 <BellRing className="w-3.5 h-3.5" />
-                قريباً في الأسواق
+                قريباً في المكتبات
               </span>
               <h3 className="text-xl font-extrabold text-stone-900 mt-3">سجّل اهتمامك بالكتاب</h3>
               <p className="text-sm text-stone-500 mt-1 leading-relaxed">

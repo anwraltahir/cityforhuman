@@ -110,7 +110,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <div className="relative overflow-hidden rounded-xl bg-[#C1E2B9]/30">
                   <span className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold text-white bg-[#E84200] rounded-full shadow-lg">
                     <BellRing className="w-3.5 h-3.5" />
-                    قريباً في الأسواق
+                    قريباً في المكتبات
                   </span>
                   <img
                     src="/cover/front"
@@ -130,7 +130,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               {/* Pre-launch call to action */}
               <div className="relative mt-4 p-4 rounded-2xl bg-white border border-[#E5DECF] shadow-sm flex flex-col sm:flex-row items-center gap-3 sm:justify-between text-center sm:text-right">
                 <div>
-                  <p className="text-base font-extrabold text-stone-900">قريباً في الأسواق</p>
+                  <p className="text-base font-extrabold text-stone-900">قريباً في المكتبات</p>
                   <p className="text-xs text-stone-500 mt-0.5">كن أول من يعلم عند صدور الكتاب</p>
                 </div>
                 <button
