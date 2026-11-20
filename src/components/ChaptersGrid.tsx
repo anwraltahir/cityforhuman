@@ -20,7 +20,7 @@ export const ChaptersGrid: React.FC<ChaptersGridProps> = ({ chapters, onSelectCh
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-right max-w-3xl mb-12 space-y-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#268F0C]">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#268F0C]">
             <Layers className="w-4 h-4" />
             <span>فهرس الكتاب</span>
           </div>
@@ -51,10 +51,10 @@ export const ChaptersGrid: React.FC<ChaptersGridProps> = ({ chapters, onSelectCh
                 <div>
                   {/* Top Metadata: Editorial Index Number (Unboxed) */}
                   <div className="flex items-center justify-between pb-3 border-b border-[#F0EAE1]">
-                    <span className="text-xs font-bold text-stone-400 group-hover:text-[#268F0C] transition-colors tabular-nums">
+                    <span className="text-sm font-bold text-stone-400 group-hover:text-[#268F0C] transition-colors tabular-nums">
                       الفصل {formattedIndex}
                     </span>
-                    <span className="text-xs text-stone-500 font-medium flex items-center gap-1.5">
+                    <span className="text-sm text-stone-500 font-medium flex items-center gap-1.5">
                       <BookOpen className="w-3.5 h-3.5 text-stone-400" />
                       <span>{chapter.keyThemes[0] || 'عمران إنساني'}</span>
                     </span>
@@ -65,16 +65,16 @@ export const ChaptersGrid: React.FC<ChaptersGridProps> = ({ chapters, onSelectCh
                     <h3 className="text-xl font-extrabold text-stone-900 group-hover:text-[#268F0C] transition-colors leading-snug">
                       {chapter.title}
                     </h3>
-                    <p className="text-xs font-semibold text-[#E84200] mt-1 leading-normal">
+                    <p className="text-sm font-semibold text-[#E84200] mt-1 leading-normal">
                       {chapter.subtitle}
                     </p>
-                    <p className="text-sm text-stone-600 mt-3 leading-relaxed line-clamp-3">
+                    <p className="text-base text-stone-600 mt-3 leading-relaxed line-clamp-3">
                       {chapter.description}
                     </p>
                   </div>
 
                   {/* Key themes tags (Clean unboxed inline text) */}
-                  <div className="mt-4 pt-3 border-t border-[#F5EFE6] flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-stone-500">
+                  <div className="mt-4 pt-3 border-t border-[#F5EFE6] flex flex-wrap gap-x-2 gap-y-1 text-[13px] text-stone-500">
                     {chapter.keyThemes.slice(0, 3).map((theme, tIdx) => (
                       <span key={tIdx} className="inline-flex items-center gap-1">
                         <span className="text-stone-300">#</span>
@@ -91,7 +91,7 @@ export const ChaptersGrid: React.FC<ChaptersGridProps> = ({ chapters, onSelectCh
 
                   <button
                     onClick={() => onSelectChapter(chapter.id)}
-                    className="px-3.5 py-1.5 text-xs font-bold text-stone-800 bg-[#FAF8F5] hover:bg-[#268F0C] hover:text-white rounded-lg border border-[#DDD5C7] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    className="px-3.5 py-1.5 text-sm font-bold text-stone-800 bg-[#FAF8F5] hover:bg-[#268F0C] hover:text-white rounded-lg border border-[#DDD5C7] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   >
                     <span>تفاصيل الفصل</span>
                     <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />

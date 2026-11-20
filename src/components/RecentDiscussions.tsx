@@ -87,7 +87,7 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
         {/* Section Top Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 text-right">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-[#268F0C] mb-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#268F0C] mb-2">
               <MessageSquare className="w-4 h-4" />
               <span>مساحة الحوار المفتوح</span>
             </div>
@@ -118,7 +118,7 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ابحث في عناوين ونصوص النقاشات..."
-              className="w-full pr-9 pl-4 py-2 bg-[#FAF8F5] border border-[#E0D8CB] rounded-xl text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#268F0C]"
+              className="w-full pr-9 pl-4 py-2 bg-[#FAF8F5] border border-[#E0D8CB] rounded-xl text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#268F0C]"
             />
           </div>
 
@@ -127,7 +127,7 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
             <div className="flex items-center gap-1 p-1 bg-[#FAF8F5] rounded-xl border border-[#E0D8CB]">
               <button
                 onClick={() => setSortFilter('latest')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors cursor-pointer ${
                   sortFilter === 'latest'
                     ? 'bg-white text-stone-900 shadow-2xs'
                     : 'text-stone-600 hover:text-stone-950'
@@ -137,7 +137,7 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
               </button>
               <button
                 onClick={() => setSortFilter('active')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors cursor-pointer ${
                   sortFilter === 'active'
                     ? 'bg-white text-stone-900 shadow-2xs'
                     : 'text-stone-600 hover:text-stone-950'
@@ -147,7 +147,7 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
               </button>
               <button
                 onClick={() => setSortFilter('views')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors cursor-pointer ${
                   sortFilter === 'views'
                     ? 'bg-white text-stone-900 shadow-2xs'
                     : 'text-stone-600 hover:text-stone-950'
@@ -167,7 +167,7 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
             <p className="text-sm text-stone-500 mt-1">كن أول من يفتتح النقاش ويطرح رؤيته حول الكتاب.</p>
             <button
               onClick={onOpenNewDiscussion}
-              className="mt-4 px-4 py-2 bg-[#268F0C] text-white text-xs font-bold rounded-lg cursor-pointer"
+              className="mt-4 px-4 py-2 bg-[#268F0C] text-white text-sm font-bold rounded-lg cursor-pointer"
             >
               ابدأ موضوع نقاش جديد
             </button>
@@ -182,7 +182,7 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F2ECE3]">
                   {/* Chapter association & status (Clean unboxed text) */}
-                  <div className="flex items-center gap-2 text-xs text-stone-500 flex-wrap">
+                  <div className="flex items-center gap-2 text-sm text-stone-500 flex-wrap">
                     <span>{formatDate(disc.createdAt)}</span>
 
                     {disc.isPinned && (
@@ -209,8 +209,8 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
                   {/* Author lockup */}
                   <div className="flex items-center gap-2">
                     <div className="text-left">
-                      <span className="block text-xs font-bold text-stone-800">{disc.authorName}</span>
-                      <span className="block text-[10px] text-stone-400 font-medium">
+                      <span className="block text-sm font-bold text-stone-800">{disc.authorName}</span>
+                      <span className="block text-xs text-stone-400 font-medium">
                         {disc.authorRole === 'admin'
                           ? 'المؤلف / المشرف العام'
                           : disc.authorRole === 'moderator'
@@ -231,14 +231,14 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
                   <h3 className="text-lg sm:text-xl font-extrabold text-stone-900 group-hover:text-[#268F0C] transition-colors leading-snug">
                     {disc.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-stone-600 mt-2 line-clamp-2 leading-relaxed">
+                  <p className="text-base text-stone-600 mt-2 line-clamp-3 leading-relaxed">
                     {disc.content}
                   </p>
                 </div>
 
                 {/* Footer Metrics & Action */}
-                <div className="mt-4 pt-3 border-t border-[#F5EFE6] flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-xs text-stone-500 tabular-nums">
+                <div className="mt-4 pt-3 border-t border-[#F5EFE6] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 sm:gap-4 text-sm text-stone-500 tabular-nums whitespace-nowrap">
                     <span className="flex items-center gap-1.5" title="الردود والمشاركات">
                       <MessageSquare className="w-4 h-4 text-stone-400" />
                       <span className="font-semibold">{disc.commentsCount} ردود</span>
@@ -255,8 +255,9 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
                     </span>
                   </div>
 
-                  <span className="text-xs font-bold text-[#268F0C] flex items-center gap-1 group-hover:underline">
-                    <span>عرض النقاش والردود</span>
+                  <span className="text-sm font-bold text-[#268F0C] flex items-center gap-1 whitespace-nowrap group-hover:underline">
+                    <span className="sm:hidden">عرض النقاش</span>
+                    <span className="hidden sm:inline">عرض النقاش والردود</span>
                     <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
                   </span>
                 </div>

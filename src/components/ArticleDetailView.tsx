@@ -38,7 +38,7 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({
 
   return (
     <div className="py-8 sm:py-12 bg-[#FAF8F5] min-h-screen text-right">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto px-3 sm:px-6 lg:px-8">
         {/* Back Button */}
         <button
           onClick={onBack}
@@ -65,7 +65,7 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({
             </div>
           )}
 
-          <div className="p-6 sm:p-10">
+          <div className="px-4 py-6 sm:p-10">
             {/* Meta */}
             <div className="flex items-center gap-3 text-xs text-stone-400 pb-4 border-b border-[#F0EAE1]">
               <span className="flex items-center gap-1">
@@ -90,7 +90,7 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({
             </div>
 
             {/* Body */}
-            <div className="text-stone-800 text-base sm:text-lg leading-loose space-y-4 whitespace-pre-line font-normal">
+            <div className="space-y-4 reading-text">
               {article.content}
             </div>
 

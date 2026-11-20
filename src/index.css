@@ -12,6 +12,29 @@
   }
 }
 
+/* Long-form Arabic reading text (discussions, comments, chapters, articles).
+   Larger size, medium weight and extra word/line spacing so Cairo does not feel cramped.
+   No letter-spacing: it breaks the joins between Arabic letters. */
+.reading-text {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 2.05;
+  word-spacing: 0.08em;
+  color: #1c1917;
+  text-align: justify;
+  text-justify: inter-word;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.reading-text--sm {
+  font-size: 17px;
+  line-height: 1.95;
+}
+@media (min-width: 640px) {
+  .reading-text { font-size: 19px; }
+  .reading-text--sm { font-size: 17px; }
+}
+
 /* Custom Scrollbar for sleek editorial layout */
 ::-webkit-scrollbar {
   width: 8px;

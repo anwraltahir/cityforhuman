@@ -16,22 +16,22 @@ interface ChapterDetailViewProps {
 export const ChapterDetailView: React.FC<ChapterDetailViewProps> = ({ chapter, onBack, onGoToDiscussions }) => {
   return (
     <div className="py-8 sm:py-12 bg-[#FAF8F5] min-h-screen text-right">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8">
         {/* Breadcrumb / Back button */}
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs font-bold text-stone-600 hover:text-[#268F0C] mb-6 p-1 cursor-pointer transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-bold text-stone-600 hover:text-[#268F0C] mb-6 p-1 cursor-pointer transition-colors"
         >
           <ArrowRight className="w-4 h-4" />
           <span>العودة إلى جميع فصول الكتاب</span>
         </button>
 
         {/* Chapter Header Banner */}
-        <div className="p-6 sm:p-10 rounded-3xl bg-white border border-[#E3DBD0] shadow-sm mb-10 relative overflow-hidden">
+        <div className="px-4 py-6 sm:p-10 rounded-3xl bg-white border border-[#E3DBD0] shadow-sm mb-10 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-2 h-full bg-[#268F0C]" />
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
             <div className="space-y-3 max-w-2xl">
-              <div className="flex items-center gap-2 text-xs font-bold text-stone-400">
+              <div className="flex items-center gap-2 text-sm font-bold text-stone-400">
                 <Layers className="w-4 h-4 text-[#268F0C]" />
                 <span className="tabular-nums">الفصل رقم {chapter.id}</span>
                 <span className="text-stone-300">·</span>
@@ -42,11 +42,11 @@ export const ChapterDetailView: React.FC<ChapterDetailViewProps> = ({ chapter, o
                 {chapter.title}
               </h1>
 
-              <p className="text-sm sm:text-base font-bold text-[#E84200] leading-snug">
+              <p className="text-base sm:text-lg font-bold text-[#E84200] leading-snug">
                 {chapter.subtitle}
               </p>
 
-              <p className="text-sm sm:text-base text-stone-700 leading-relaxed pt-2">
+              <p className="pt-2 reading-text">
                 {chapter.description}
               </p>
 
@@ -55,7 +55,7 @@ export const ChapterDetailView: React.FC<ChapterDetailViewProps> = ({ chapter, o
                 {chapter.keyThemes.map((theme, i) => (
                   <span
                     key={i}
-                    className="text-xs text-stone-600 bg-[#F4EFEA] px-3 py-1 rounded-lg border border-[#E8E2D6]"
+                    className="text-sm text-stone-600 bg-[#F4EFEA] px-3 py-1 rounded-lg border border-[#E8E2D6]"
                   >
                     #{theme}
                   </span>
