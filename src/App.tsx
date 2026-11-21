@@ -32,6 +32,33 @@ import { ReportModal } from './components/ReportModal';
 import { LegalModal } from './components/LegalModals';
 import { AdminDashboard } from './components/AdminDashboard';
 
+type ViewMode = 'main' | 'chapters' | 'chapter_detail' | 'discussion_detail' | 'article_detail';
+interface Route {
+  view: ViewMode;
+  chapterId?: number;
+  discussionId?: string;
+  articleId?: string;
+}
+
+/** URL -> page. Unknown paths fall back to the home page. */
+const parseRoute = (pathname: string): Route => {
+  const parts = pathname.replace(/\/+$/, '').split('/').filter(Boolean).map(decodeURIComponent);
+  if (parts[0] === 'discussions' && parts[1]) return { view: 'discussion_detail', discussionId: parts[1] };
+  if (parts[0] === 'articles' && parts[1]) return { view: 'article_detail', articleId: parts[1] };
+  if (parts[0] === 'chapters' && parts[1] && /^\d+$/.test(parts[1])) return { view: 'chapter_detail', chapterId: Number(parts[1]) };
+  if (parts[0] === 'chapters') return { view: 'chapters' };
+  return { view: 'main' };
+};
+
+/** Page -> URL. */
+const routePath = (r: Route): string => {
+  if (r.view === 'discussion_detail' && r.discussionId) return `/discussions/${encodeURIComponent(r.discussionId)}`;
+  if (r.view === 'article_detail' && r.articleId) return `/articles/${encodeURIComponent(r.articleId)}`;
+  if (r.view === 'chapter_detail' && r.chapterId) return `/chapters/${r.chapterId}`;
+  if (r.view === 'chapters') return '/chapters';
+  return '/';
+};
+
 function MainApp() {
   const { showToast } = useToast();
 
@@ -43,11 +70,50 @@ function MainApp() {
   const [ready, setReady] = useState(() => store.isReady());
 
   // Views & Routing State
-  const [viewMode, setViewMode] = useState<'main' | 'chapters' | 'chapter_detail' | 'discussion_detail' | 'article_detail'>('main');
-  const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
-  const [selectedDiscussionId, setSelectedDiscussionId] = useState<string | null>(null);
-  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
-  const [activeNavSection, setActiveNavSection] = useState('home');
+  // The page shown is driven by the URL, so shared links open the right page
+  const initialRoute = parseRoute(window.location.pathname);
+  const [viewMode, setViewMode] = useState<ViewMode>(initialRoute.view);
+  const [selectedChapterId, setSelectedChapterId] = useState<number | null>(initialRoute.chapterId ?? null);
+  const [selectedDiscussionId, setSelectedDiscussionId] = useState<string | null>(initialRoute.discussionId ?? null);
+  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(initialRoute.articleId ?? null);
+  const [activeNavSection, setActiveNavSection] = useState(
+    initialRoute.view === 'chapters' || initialRoute.view === 'chapter_detail' ? 'chapters' : 'home'
+  );
+
+  // Keep the address bar in sync with the page (new history entry per page)
+  useEffect(() => {
+    const path = routePath({
+      view: viewMode,
+      chapterId: selectedChapterId ?? undefined,
+      discussionId: selectedDiscussionId ?? undefined,
+      articleId: selectedArticleId ?? undefined,
+    });
+    if (path !== window.location.pathname) window.history.pushState(null, '', path);
+  }, [viewMode, selectedChapterId, selectedDiscussionId, selectedArticleId]);
+
+  // Tab title per page (also what people see when they bookmark or share)
+  useEffect(() => {
+    const site = 'مدن الإنسان – City for Human';
+    let title = '';
+    if (viewMode === 'discussion_detail' && selectedDiscussionId) title = store.getDiscussionById(selectedDiscussionId)?.title || '';
+    else if (viewMode === 'article_detail' && selectedArticleId) title = store.getArticleById(selectedArticleId)?.title || '';
+    else if (viewMode === 'chapter_detail' && selectedChapterId) title = store.getChapterById(selectedChapterId)?.title || '';
+    else if (viewMode === 'chapters') title = 'فصول الكتاب';
+    document.title = title ? `${title} | ${site}` : `${site} | مجتمع كتاب مدن الإنسان للكاتب عثمان الطيب`;
+  }, [viewMode, selectedChapterId, selectedDiscussionId, selectedArticleId, discussions, articles, chapters]);
+
+  // Browser back/forward
+  useEffect(() => {
+    const onPop = () => {
+      const r = parseRoute(window.location.pathname);
+      setSelectedChapterId(r.chapterId ?? null);
+      setSelectedDiscussionId(r.discussionId ?? null);
+      setSelectedArticleId(r.articleId ?? null);
+      setViewMode(r.view);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   // Modals
   const [authModal, setAuthModal] = useState<{ open: boolean; tab: 'login' | 'register' }>({

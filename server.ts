@@ -265,9 +265,66 @@ async function startServer() {
         else if (file.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       },
     }));
-    app.get('*', (_req: Request, res: Response) => {
+    // SPA fallback. For shareable pages (discussion / article / chapter) the page's own
+    // title and description are written into the meta tags, because link previews
+    // (WhatsApp, Facebook, X) read the HTML without running JavaScript.
+    const INDEX_FILE = path.resolve(__dirname, 'dist', 'index.html');
+    const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const clip = (v: string, n: number) => {
+      const t = v.replace(/\s+/g, ' ').trim();
+      return t.length > n ? `${t.slice(0, n - 1)}…` : t;
+    };
+    const pageMeta = (urlPath: string): { title: string; description: string; image?: string } | null => {
+      const [, kind, rawId] = urlPath.split('/');
+      const id = rawId ? decodeURIComponent(rawId) : '';
+      const db = engine.db;
+      if (kind === 'discussions' && id) {
+        const d = db.discussions.find((x) => x.id === id);
+        return d ? { title: d.title, description: d.content, image: d.imageUrl } : null;
+      }
+      if (kind === 'articles' && id) {
+        const a = db.articles.find((x) => x.id === id && x.status === 'approved');
+        return a ? { title: a.title, description: a.excerpt || a.content, image: a.coverImage } : null;
+      }
+      if (kind === 'chapters' && /^\d+$/.test(id)) {
+        const c = db.chapters.find((x) => x.id === Number(id));
+        return c ? { title: c.title, description: c.subtitle ? `${c.subtitle} — ${c.description}` : c.description } : null;
+      }
+      return null;
+    };
+
+    app.get('*', (req: Request, res: Response) => {
       res.setHeader('Cache-Control', 'no-cache');
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+      const meta = pageMeta(req.path);
+      if (!meta) return res.sendFile(INDEX_FILE);
+
+      const site = 'مدن الإنسان – City for Human';
+      const url = `https://cityforhuman.com${req.path}`;
+      const title = esc(`${clip(meta.title, 90)} | ${site}`);
+      const description = esc(clip(meta.description, 200));
+      const image = meta.image
+        ? esc(meta.image.startsWith('/') ? `https://cityforhuman.com${meta.image}` : meta.image)
+        : null;
+
+      let html = fs.readFileSync(INDEX_FILE, 'utf8');
+      const setTag = (re: RegExp, value: string) => {
+        html = html.replace(re, (_m, before, _old, after) => `${before}${value}${after}`);
+      };
+      html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${title}</title>`);
+      setTag(/(<meta name="description" content=")([^"]*)("[^>]*>)/, description);
+      setTag(/(<link rel="canonical" href=")([^"]*)("[^>]*>)/, url);
+      setTag(/(<meta property="og:title" content=")([^"]*)("[^>]*>)/, title);
+      setTag(/(<meta property="og:description" content=")([^"]*)("[^>]*>)/, description);
+      setTag(/(<meta property="og:url" content=")([^"]*)("[^>]*>)/, url);
+      setTag(/(<meta property="og:type" content=")([^"]*)("[^>]*>)/, 'article');
+      setTag(/(<meta name="twitter:title" content=")([^"]*)("[^>]*>)/, title);
+      setTag(/(<meta name="twitter:description" content=")([^"]*)("[^>]*>)/, description);
+      if (image) {
+        setTag(/(<meta property="og:image" content=")([^"]*)("[^>]*>)/, image);
+        setTag(/(<meta property="og:image:secure_url" content=")([^"]*)("[^>]*>)/, image);
+        setTag(/(<meta name="twitter:image" content=")([^"]*)("[^>]*>)/, image);
+      }
+      res.type('html').send(html);
     });
   }
 
