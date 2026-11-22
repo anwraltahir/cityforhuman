@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEscapeClose } from '../hooks/useEscapeClose';
 import React from 'react';
 import { X, ShieldCheck, FileText } from 'lucide-react';
 
@@ -12,15 +13,17 @@ interface LegalModalProps {
 }
 
 export const LegalModal: React.FC<LegalModalProps> = ({ type, onClose }) => {
+  useEscapeClose(onClose);
   const isPrivacy = type === 'privacy';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E0D8CB] overflow-hidden text-right flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in" role="dialog" aria-modal="true" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E0D8CB] overflow-hidden text-right flex flex-col max-h-[85dvh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0EAE1] bg-[#FAF8F5]">
           <button
             onClick={onClose}
+            aria-label="إغلاق"
             className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-[#EFEAE2] rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />

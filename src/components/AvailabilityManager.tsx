@@ -7,7 +7,7 @@ import { useToast } from './Toast';
 const tmpId = (p: string) => `${p}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const input =
   'w-full p-2.5 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:border-[#268F0C]';
-const label = 'block text-[11px] font-bold text-stone-600 mb-1';
+const label = 'block text-xs font-bold text-stone-600 mb-1';
 
 /** Admin editor for where to get the book: bookstores (printed) and online stores (digital). */
 export const AvailabilityManager: React.FC = () => {
@@ -107,12 +107,12 @@ export const AvailabilityManager: React.FC = () => {
             </div>
             <div className="flex justify-end gap-2">
               {i > 0 && (
-                <button onClick={() => setPaper(moveUp(av.paper, i))} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-stone-600 hover:bg-[#EFEAE2] rounded-lg cursor-pointer">
+                <button onClick={() => setPaper(moveUp(av.paper, i))} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-stone-600 hover:bg-[#EFEAE2] rounded-lg cursor-pointer">
                   <ArrowUp className="w-3.5 h-3.5" />
                   تقديم
                 </button>
               )}
-              <button onClick={() => setPaper(av.paper.filter((x) => x.id !== s.id))} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 rounded-lg cursor-pointer">
+              <button onClick={() => setPaper(av.paper.filter((x) => x.id !== s.id))} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg cursor-pointer">
                 <Trash2 className="w-3.5 h-3.5" />
                 حذف
               </button>
@@ -151,12 +151,12 @@ export const AvailabilityManager: React.FC = () => {
             </div>
             <div className="flex justify-end gap-2">
               {i > 0 && (
-                <button onClick={() => setDigital(moveUp(av.digital, i))} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-stone-600 hover:bg-[#EFEAE2] rounded-lg cursor-pointer">
+                <button onClick={() => setDigital(moveUp(av.digital, i))} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-stone-600 hover:bg-[#EFEAE2] rounded-lg cursor-pointer">
                   <ArrowUp className="w-3.5 h-3.5" />
                   تقديم
                 </button>
               )}
-              <button onClick={() => setDigital(av.digital.filter((x) => x.id !== d.id))} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 rounded-lg cursor-pointer">
+              <button onClick={() => setDigital(av.digital.filter((x) => x.id !== d.id))} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg cursor-pointer">
                 <Trash2 className="w-3.5 h-3.5" />
                 حذف
               </button>

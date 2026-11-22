@@ -44,7 +44,7 @@ export const AuthorSection: React.FC = () => {
               <span>عن المؤلف والمسيرة المهنية والفكرية</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900">
               المهندس والكاتب عثمان الطيب
             </h2>
 

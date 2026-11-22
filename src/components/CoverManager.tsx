@@ -68,10 +68,10 @@ export const CoverManager: React.FC = () => {
     <div className="max-w-2xl bg-white p-4 sm:p-6 rounded-3xl border border-[#E5DDD0] space-y-4">
       <div>
         <h3 className="text-sm font-bold text-stone-800">غلاف الكتاب</h3>
-        <p className="text-[11px] text-stone-500 mt-0.5">
+        <p className="text-xs text-stone-500 mt-0.5">
           يظهر التغيير لجميع زوار الموقع فوراً. الصيغ المقبولة: JPG أو PNG أو WEBP، بحد أقصى 7 ميجابايت.
         </p>
-        <p className="text-[11px] text-stone-500 mt-1">
+        <p className="text-xs text-stone-500 mt-1">
           ارفع الغلاف الكامل المفرود (الوجه الأمامي يساراً، ثم الكعب، ثم الظهر يميناً) بنفس مقاسات الغلاف الحالي، حتى يظهر
           الوجه والكعب والظهر صحيحين على الكتاب.
         </p>

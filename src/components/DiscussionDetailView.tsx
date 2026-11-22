@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { NotFound } from './NotFound';
 import React, { useState, useEffect } from 'react';
 import { Discussion, Chapter, Comment, User } from '../types';
 import { store } from '../services/storage';
@@ -83,15 +84,12 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
 
   if (!discussion) {
     return (
-      <div className="py-20 text-center text-stone-600 max-w-xl mx-auto">
-        <p className="text-lg font-bold">عذراً، لم يتم العثور على هذا النقاش أو ربما تم حذفه.</p>
-        <button
-          onClick={onBack}
-          className="mt-4 px-4 py-2 bg-[#268F0C] text-white rounded-xl text-sm font-bold"
-        >
-          العودة للقائمة
-        </button>
-      </div>
+      <NotFound
+        title="النقاش غير موجود"
+        message="عذراً، لم يتم العثور على هذا النقاش أو ربما تم حذفه."
+        backLabel="العودة إلى النقاشات"
+        onBack={onBack}
+      />
     );
   }
 
@@ -225,7 +223,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
                   setReplyingToId(replyingToId === comment.id ? null : comment.id);
                   setReplyContent('');
                 }}
-                className="p-1.5 text-stone-500 hover:text-[#268F0C] hover:bg-[#FAF8F5] rounded-lg text-sm flex items-center gap-1 transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] px-2 justify-center text-stone-500 hover:text-[#268F0C] hover:bg-[#FAF8F5] rounded-lg text-sm flex items-center gap-1 transition-colors cursor-pointer"
                 title="الرد على هذا التعليق"
               >
                 <Reply className="w-3.5 h-3.5" />
@@ -243,7 +241,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
                   if (!res.ok) showToast(res.error || 'تعذر تسجيل الإعجاب', 'error');
                 });
               }}
-              className={`p-1.5 rounded-lg text-sm flex items-center gap-1 transition-colors cursor-pointer ${
+              className={`min-w-[44px] min-h-[44px] px-2 justify-center rounded-lg text-sm flex items-center gap-1 transition-colors cursor-pointer ${
                 isCommentLiked ? 'text-[#E84200] font-bold' : 'text-stone-500 hover:text-[#E84200]'
               }`}
               title="إعجاب بالتعليق"
@@ -258,7 +256,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
                   setEditingCommentId(comment.id);
                   setEditingContent(comment.content);
                 }}
-                className="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg text-sm transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] px-2 inline-flex items-center justify-center text-stone-400 hover:text-stone-700 rounded-lg text-sm transition-colors cursor-pointer"
                 title="تعديل التعليق"
               >
                 <Edit3 className="w-3.5 h-3.5" />
@@ -268,7 +266,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
             {(isOwner || canModerate) && (
               <button
                 onClick={() => handleDeleteComment(comment.id)}
-                className="p-1.5 text-stone-400 hover:text-red-600 rounded-lg text-sm transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] px-2 inline-flex items-center justify-center text-stone-400 hover:text-red-600 rounded-lg text-sm transition-colors cursor-pointer"
                 title="حذف التعليق"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -278,7 +276,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
             {!isOwner && (
               <button
                 onClick={() => onOpenReport('comment', comment.id, `تعليق من ${comment.authorName}`)}
-                className="p-1.5 text-stone-300 hover:text-red-600 rounded-lg text-sm transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] px-2 inline-flex items-center justify-center text-stone-300 hover:text-red-600 rounded-lg text-sm transition-colors cursor-pointer"
                 title="إبلاغ عن تعليق مخالف"
               >
                 <Flag className="w-3 h-3" />
@@ -361,7 +359,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
   };
 
   return (
-    <div className="py-8 sm:py-12 bg-[#FAF8F5] min-h-screen text-right">
+    <div className="py-8 sm:py-12 bg-[#FAF8F5] min-h-svh text-right">
       <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8">
         {/* Navigation Breadcrumb */}
         <button
@@ -422,7 +420,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
           </div>
 
           {/* Title */}
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-stone-900 mt-6 leading-snug tracking-tight">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-stone-900 mt-6 leading-snug">
             {discussion.title}
           </h1>
 
@@ -497,7 +495,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
               <span>·</span>
               <button
                 onClick={() => onOpenReport('discussion', discussion.id, discussion.title)}
-                className="text-stone-400 hover:text-red-600 flex items-center gap-1 transition-colors cursor-pointer"
+                className="min-h-[44px] px-2 text-stone-400 hover:text-red-600 flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <Flag className="w-3.5 h-3.5" />
                 <span>إبلاغ</span>
@@ -520,7 +518,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
             <div className="flex items-center gap-1 p-1 bg-white rounded-xl border border-[#E0D8CB] text-sm whitespace-nowrap">
               <button
                 onClick={() => setCommentSort('latest')}
-                className={`px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
+                className={`px-3 min-h-[44px] rounded-lg font-semibold transition-colors cursor-pointer ${
                   commentSort === 'latest' ? 'bg-[#FAF8F5] text-stone-900 font-bold' : 'text-stone-500'
                 }`}
               >
@@ -528,7 +526,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
               </button>
               <button
                 onClick={() => setCommentSort('oldest')}
-                className={`px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
+                className={`px-3 min-h-[44px] rounded-lg font-semibold transition-colors cursor-pointer ${
                   commentSort === 'oldest' ? 'bg-[#FAF8F5] text-stone-900 font-bold' : 'text-stone-500'
                 }`}
               >
@@ -536,7 +534,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
               </button>
               <button
                 onClick={() => setCommentSort('active')}
-                className={`px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
+                className={`px-3 min-h-[44px] rounded-lg font-semibold transition-colors cursor-pointer ${
                   commentSort === 'active' ? 'bg-[#FAF8F5] text-stone-900 font-bold' : 'text-stone-500'
                 }`}
               >

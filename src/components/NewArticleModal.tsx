@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEscapeClose } from '../hooks/useEscapeClose';
 import React, { useState } from 'react';
 import { store } from '../services/storage';
 import { useToast } from './Toast';
@@ -23,6 +24,7 @@ const CATEGORIES = [
 ];
 
 export const NewArticleModal: React.FC<NewArticleModalProps> = ({ onClose, onSuccess }) => {
+  useEscapeClose(onClose);
   const { showToast } = useToast();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
@@ -51,12 +53,13 @@ export const NewArticleModal: React.FC<NewArticleModalProps> = ({ onClose, onSuc
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in" role="dialog" aria-modal="true">
       <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E0D8CB] overflow-hidden text-right">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0EAE1] bg-[#FAF8F5]">
           <button
             onClick={onClose}
+            aria-label="إغلاق"
             className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-[#EFEAE2] rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -76,7 +79,7 @@ export const NewArticleModal: React.FC<NewArticleModalProps> = ({ onClose, onSuc
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75dvh] overflow-y-auto">
           {/* Title */}
           <div>
             <label className="block text-xs font-bold text-stone-700 mb-1.5">

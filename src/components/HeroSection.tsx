@@ -45,7 +45,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </div>
 
             {/* Display Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-stone-900 leading-[1.2] tracking-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-stone-900 leading-[1.2]">
               {settings.bookTitle}
             </h1>
 
@@ -77,7 +77,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <ShoppingBag className="w-5 h-5 text-[#A99C8A]" />
                 <span>احصل على الكتاب</span>
                 {!isAvailable && (
-                  <span className="text-[11px] font-bold text-[#E84200] bg-[#E84200]/10 px-2 py-0.5 rounded-full">قريباً</span>
+                  <span className="text-xs font-bold text-[#E84200] bg-[#E84200]/10 px-2 py-0.5 rounded-full">قريباً</span>
                 )}
               </button>
             </div>

@@ -43,7 +43,7 @@ export const ReaderArticlesSection: React.FC<ReaderArticlesSectionProps> = ({
               <Newspaper className="w-4 h-4" />
               <span>منصة الأقلام المعمارية والحضرية</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900">
               مقالات ودراسات القراء
             </h2>
             <p className="text-stone-600 text-sm sm:text-base mt-1 max-w-2xl leading-relaxed">
@@ -86,7 +86,7 @@ export const ReaderArticlesSection: React.FC<ReaderArticlesSectionProps> = ({
                       referrerPolicy="no-referrer"
                     />
                     {/* Quiet category metadata overlay */}
-                    <div className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-stone-900/80 backdrop-blur-xs text-white text-[11px] font-semibold">
+                    <div className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-stone-900/80 backdrop-blur-xs text-white text-xs font-semibold">
                       {article.category}
                     </div>
                   </div>
@@ -123,7 +123,7 @@ export const ReaderArticlesSection: React.FC<ReaderArticlesSectionProps> = ({
                     />
                     <div className="text-right">
                       <span className="block text-xs font-bold text-stone-800">{article.authorName}</span>
-                      <span className="block text-[10px] text-stone-400 font-medium">كاتب مساهم</span>
+                      <span className="block text-xs text-stone-400 font-medium">كاتب مساهم</span>
                     </div>
                   </div>
 

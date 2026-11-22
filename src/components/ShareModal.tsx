@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEscapeClose } from '../hooks/useEscapeClose';
 import React, { useState } from 'react';
 import { X, Copy, Check, MessageCircle, Send } from 'lucide-react';
 import { useToast } from './Toast';
@@ -14,6 +15,7 @@ interface ShareModalProps {
 }
 
 export const ShareModal: React.FC<ShareModalProps> = ({ title, url, onClose }) => {
+  useEscapeClose(onClose);
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -28,11 +30,12 @@ export const ShareModal: React.FC<ShareModalProps> = ({ title, url, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in" role="dialog" aria-modal="true">
       <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-[#E0D8CB] overflow-hidden text-right p-6">
         <div className="flex items-center justify-between pb-3 border-b border-[#F0EAE1]">
           <button
             onClick={onClose}
+            aria-label="إغلاق"
             className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-[#EFEAE2] rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -54,7 +57,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ title, url, onClose }) =
             className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#E8F8EA] hover:bg-[#d6f4d9] text-[#1b7a2e] border border-[#b2e8b8] transition-all"
           >
             <MessageCircle className="w-6 h-6 mb-1 fill-current" />
-            <span className="text-[11px] font-bold">واتساب</span>
+            <span className="text-xs font-bold">واتساب</span>
           </a>
 
           {/* Twitter / X */}
@@ -65,7 +68,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ title, url, onClose }) =
             className="flex flex-col items-center justify-center p-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-900 border border-stone-300 transition-all"
           >
             <span className="text-lg font-black mb-0.5">𝕏</span>
-            <span className="text-[11px] font-bold">منصة إكس</span>
+            <span className="text-xs font-bold">منصة إكس</span>
           </a>
 
           {/* Telegram */}
@@ -76,7 +79,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ title, url, onClose }) =
             className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#E6F3FA] hover:bg-[#d2ecf9] text-[#1785b8] border border-[#aed9f1] transition-all"
           >
             <Send className="w-5 h-5 mb-1.5" />
-            <span className="text-[11px] font-bold">تيليجرام</span>
+            <span className="text-xs font-bold">تيليجرام</span>
           </a>
         </div>
 

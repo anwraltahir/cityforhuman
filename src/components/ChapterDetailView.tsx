@@ -15,7 +15,7 @@ interface ChapterDetailViewProps {
 
 export const ChapterDetailView: React.FC<ChapterDetailViewProps> = ({ chapter, onBack, onGoToDiscussions }) => {
   return (
-    <div className="py-8 sm:py-12 bg-[#FAF8F5] min-h-screen text-right">
+    <div className="py-8 sm:py-12 bg-[#FAF8F5] min-h-svh text-right">
       <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8">
         {/* Breadcrumb / Back button */}
         <button
@@ -38,7 +38,7 @@ export const ChapterDetailView: React.FC<ChapterDetailViewProps> = ({ chapter, o
                 <span>كتاب مدن الإنسان</span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight leading-tight">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-stone-900 leading-tight">
                 {chapter.title}
               </h1>
 

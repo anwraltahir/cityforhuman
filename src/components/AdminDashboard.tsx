@@ -8,6 +8,7 @@ import { User, Chapter, Discussion, Article, ReportItem, ModerationAction, SiteS
 import { store, ActResult } from '../services/storage';
 import { useToast } from './Toast';
 import { CoverManager } from './CoverManager';
+import { useEscapeClose } from '../hooks/useEscapeClose';
 import { InterestList } from './InterestList';
 import { AvailabilityManager } from './AvailabilityManager';
 import {
@@ -155,6 +156,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Discussion edit (title / content / chapter / image)
   const [editingDisc, setEditingDisc] = useState<Discussion | null>(null);
+
+  // Escape closes the top-most layer: inner dialogs, then the mobile menu, then the panel
+  useEscapeClose(onClose);
+  useEscapeClose(() => setNavOpen(false), navOpen);
+  useEscapeClose(() => setReviewArticleId(null), !!reviewArticleId);
+  useEscapeClose(() => setEditingDisc(null), !!editingDisc);
   const handleSaveDiscussion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingDisc) return;
@@ -245,7 +252,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-[#FAF8F5] text-right overflow-hidden animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex bg-[#FAF8F5] text-right overflow-hidden animate-in fade-in" role="dialog" aria-modal="true" aria-label="لوحة الإدارة">
       {/* Mobile backdrop */}
       {navOpen && (
         <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setNavOpen(false)} />
@@ -261,7 +268,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* Brand & Badge */}
           <div className="p-5 border-b border-[#F0EAE1]">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#268F0C] bg-[#268F0C]/10 px-2 py-0.5 rounded">
+              <span className="text-xs font-bold text-[#268F0C] bg-[#268F0C]/10 px-2 py-0.5 rounded">
                 لوحة الإدارة
               </span>
               <ShieldCheck className="w-5 h-5 text-[#268F0C]" />
@@ -460,7 +467,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <p className="text-2xl font-black text-stone-900 mt-1 tabular-nums">
                     {stats.totalUsers}
                   </p>
-                  <span className="text-[10px] text-[#268F0C] font-semibold mt-1 block">
+                  <span className="text-xs text-[#268F0C] font-semibold mt-1 block">
                     {stats.activeUsers} حساب نشط
                   </span>
                 </div>
@@ -470,7 +477,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <p className="text-2xl font-black text-stone-900 mt-1 tabular-nums">
                     {stats.totalDiscussions}
                   </p>
-                  <span className="text-[10px] text-stone-400 font-semibold mt-1 block">
+                  <span className="text-xs text-stone-400 font-semibold mt-1 block">
                     موزعة على الفصول
                   </span>
                 </div>
@@ -480,7 +487,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <p className="text-2xl font-black text-stone-900 mt-1 tabular-nums">
                     {stats.totalComments}
                   </p>
-                  <span className="text-[10px] text-stone-400 font-semibold mt-1 block">ردود متداخلة</span>
+                  <span className="text-xs text-stone-400 font-semibold mt-1 block">ردود متداخلة</span>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-white border border-[#E5DDD0] shadow-2xs">
@@ -488,7 +495,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <p className="text-2xl font-black text-[#268F0C] mt-1 tabular-nums">
                     {stats.publishedArticles}
                   </p>
-                  <span className="text-[10px] text-stone-400 font-semibold mt-1 block">معتمدة رسمياً</span>
+                  <span className="text-xs text-stone-400 font-semibold mt-1 block">معتمدة رسمياً</span>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-white border border-[#E5DDD0] shadow-2xs">
@@ -496,7 +503,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <p className="text-2xl font-black text-[#E84200] mt-1 tabular-nums">
                     {stats.pendingArticles}
                   </p>
-                  <span className="text-[10px] text-[#E84200] font-semibold mt-1 block">
+                  <span className="text-xs text-[#E84200] font-semibold mt-1 block">
                     تحتاج قرارك
                   </span>
                 </div>
@@ -506,7 +513,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <p className="text-2xl font-black text-red-600 mt-1 tabular-nums">
                     {stats.openReports}
                   </p>
-                  <span className="text-[10px] text-red-500 font-semibold mt-1 block">
+                  <span className="text-xs text-red-500 font-semibold mt-1 block">
                     تتطلب تدخلاً
                   </span>
                 </div>
@@ -528,9 +535,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <span className="text-stone-400">·</span>
                           <span className="text-stone-600">{log.target}</span>
                         </div>
-                        <p className="text-[11px] text-stone-500 mt-0.5">{log.details}</p>
+                        <p className="text-xs text-stone-500 mt-0.5">{log.details}</p>
                       </div>
-                      <div className="text-left text-[10px] text-stone-400 tabular-nums">
+                      <div className="text-left text-xs text-stone-400 tabular-nums">
                         <span className="block font-semibold text-stone-700">{log.moderatorName}</span>
                         <span>{formatDate(log.timestamp)}</span>
                       </div>
@@ -581,7 +588,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           />
                           <div>
                             <span className="block font-bold text-stone-900">{u.name}</span>
-                            <span className="block text-[10px] text-stone-400">@{u.username}</span>
+                            <span className="block text-xs text-stone-400">@{u.username}</span>
                           </div>
                         </td>
                         <td className="p-3.5 font-mono text-stone-600">{u.email}</td>
@@ -589,7 +596,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <select
                             value={u.role}
                             onChange={(e) => handleChangeUserRole(u.id, e.target.value as User['role'])}
-                            className="bg-transparent border border-[#DDD5C7] rounded-lg p-1 text-[11px] font-bold text-stone-800 focus:outline-none focus:border-[#268F0C]"
+                            className="bg-transparent border border-[#DDD5C7] rounded-lg p-1 text-xs font-bold text-stone-800 focus:outline-none focus:border-[#268F0C]"
                           >
                             <option value="member">عضو</option>
                             <option value="moderator">مشرف</option>
@@ -598,7 +605,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </td>
                         <td className="p-3.5">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            className={`px-2 py-0.5 rounded text-xs font-bold ${
                               u.status === 'active'
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-red-100 text-red-800'
@@ -611,7 +618,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <td className="p-3.5 text-center">
                           <button
                             onClick={() => handleToggleUserStatus(u)}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                               u.status === 'active'
                                 ? 'bg-red-50 text-red-700 hover:bg-red-100'
                                 : 'bg-green-50 text-green-700 hover:bg-green-100'
@@ -622,7 +629,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           {currentUser.role === 'admin' && (
                             <button
                               onClick={() => handleResetPassword(u)}
-                              className="mr-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#FAF8F5] text-stone-600 hover:bg-[#EFEAE2] cursor-pointer"
+                              className="mr-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-[#FAF8F5] text-stone-600 hover:bg-[#EFEAE2] cursor-pointer"
                             >
                               كلمة مرور جديدة
                             </button>
@@ -755,7 +762,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-xs">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          className={`px-2 py-0.5 rounded text-xs font-bold ${
                             art.status === 'approved'
                               ? 'bg-green-100 text-green-800'
                               : art.status === 'pending'
@@ -781,7 +788,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <h4 className="text-base font-extrabold text-stone-900">{art.title}</h4>
                       <p className="text-xs text-stone-600 line-clamp-2">{art.excerpt}</p>
                       {art.moderatorNotes && (
-                        <p className="text-[11px] text-[#E84200] font-semibold mt-1">
+                        <p className="text-xs text-[#E84200] font-semibold mt-1">
                           ملاحظة الإشراف: {art.moderatorNotes}
                         </p>
                       )}
@@ -903,7 +910,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <h4 className="text-base font-extrabold text-stone-900">{ch.title}</h4>
                         <p className="text-xs font-bold text-[#E84200]">{ch.subtitle}</p>
                         <p className="text-xs text-stone-600 line-clamp-3">{ch.description}</p>
-                        <div className="pt-2 flex items-center gap-3 text-[11px] text-stone-400 tabular-nums">
+                        <div className="pt-2 flex items-center gap-3 text-xs text-stone-400 tabular-nums">
                           <span>{ch.discussionsCount} موضوع</span>
                           <span>·</span>
                           <span>{ch.commentsCount} مشاركة</span>
@@ -933,7 +940,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div>
                       <div className="flex items-center gap-2 text-xs">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          className={`px-2 py-0.5 rounded text-xs font-bold ${
                             rep.status === 'pending'
                               ? 'bg-red-100 text-red-800'
                               : 'bg-green-100 text-green-800'
@@ -1076,9 +1083,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span className="text-stone-400">·</span>
                         <span className="text-[#268F0C] font-semibold">{log.target}</span>
                       </div>
-                      <p className="text-[11px] text-stone-500 mt-0.5">{log.details}</p>
+                      <p className="text-xs text-stone-500 mt-0.5">{log.details}</p>
                     </div>
-                    <div className="text-left text-[10px] text-stone-400 tabular-nums">
+                    <div className="text-left text-xs text-stone-400 tabular-nums">
                       <span className="block font-bold text-stone-700">{log.moderatorName}</span>
                       <span>{formatDate(log.timestamp)}</span>
                     </div>
@@ -1092,15 +1099,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* Article Review Decision Prompt Modal */}
       {editingDisc && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50" onClick={() => setEditingDisc(null)}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-label="تعديل النقاش" onClick={() => setEditingDisc(null)}>
           <form
             onSubmit={handleSaveDiscussion}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl"
+            className="w-full max-w-2xl max-h-[90dvh] overflow-y-auto bg-white rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-base font-extrabold text-stone-900">تعديل النقاش</h3>
-              <button type="button" onClick={() => setEditingDisc(null)} className="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg cursor-pointer">
+              <button aria-label="إغلاق" type="button" onClick={() => setEditingDisc(null)} className="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1162,7 +1169,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {reviewArticleId && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs" role="dialog" aria-modal="true" aria-label="مراجعة المقال">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 border border-[#DDD5C7] shadow-2xl text-right space-y-4">
             <h3 className="text-base font-bold text-stone-900">
               قرار مراجعة المقال: {reviewAction === 'approved' ? 'موافقة ونشر' : reviewAction === 'rejected' ? 'رفض' : 'طلب تعديل'}

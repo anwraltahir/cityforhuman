@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEscapeClose } from '../hooks/useEscapeClose';
 import React from 'react';
 import { NotificationItem } from '../types';
 import { store } from '../services/storage';
@@ -21,6 +22,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
   onSelectDiscussion,
   onSelectArticle,
 }) => {
+  useEscapeClose(onClose);
   const notifications = store.getNotificationsForUser(userId);
 
   const handleItemClick = (notif: NotificationItem) => {
@@ -67,12 +69,13 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-2xs animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-2xs animate-in fade-in" role="dialog" aria-modal="true">
       <div className="relative w-full max-w-sm sm:max-w-md bg-white h-full shadow-2xl border-r border-[#E0D8CB] flex flex-col text-right">
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-[#F0EAE1] bg-[#FAF8F5] flex items-center justify-between">
           <button
             onClick={onClose}
+            aria-label="إغلاق"
             className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-[#EFEAE2] rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -124,7 +127,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <h4 className="text-xs font-bold text-stone-900">{notif.title}</h4>
-                      <span className="text-[10px] text-stone-400 tabular-nums shrink-0">
+                      <span className="text-xs text-stone-400 tabular-nums shrink-0">
                         {formatDate(notif.createdAt)}
                       </span>
                     </div>

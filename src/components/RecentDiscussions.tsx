@@ -91,7 +91,7 @@ export const RecentDiscussions: React.FC<RecentDiscussionsProps> = ({
               <MessageSquare className="w-4 h-4" />
               <span>مساحة الحوار المفتوح</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900">
               نقاشات القراء والمفكرين
             </h2>
             <p className="text-stone-600 text-sm sm:text-base mt-1">

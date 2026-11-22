@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEscapeClose } from '../hooks/useEscapeClose';
 import React, { useState } from 'react';
 import { store } from '../services/storage';
 import { useToast } from './Toast';
@@ -29,6 +30,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   targetTitle,
   onClose,
 }) => {
+  useEscapeClose(onClose);
   const { showToast } = useToast();
   const [reason, setReason] = useState(REPORT_REASONS[0]);
   const [details, setDetails] = useState('');
@@ -52,11 +54,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in" role="dialog" aria-modal="true">
       <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E0D8CB] overflow-hidden text-right p-6">
         <div className="flex items-center justify-between pb-3 border-b border-[#F0EAE1]">
           <button
             onClick={onClose}
+            aria-label="إغلاق"
             className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-[#EFEAE2] rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />

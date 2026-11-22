@@ -316,7 +316,8 @@ class DataStore {
 
   /** Counts a view once per page load. */
   public incrementDiscussionViews(id: string) {
-    if (this.viewed.has(id)) return;
+    // Never count views for a discussion that does not exist (deleted / bad link)
+    if (this.viewed.has(id) || !this.getDiscussionById(id)) return;
     this.viewed.add(id);
     this.act('viewDiscussion', { id });
   }
@@ -404,7 +405,7 @@ class DataStore {
   }
 
   public incrementArticleViews(id: string) {
-    if (this.viewed.has(id)) return;
+    if (this.viewed.has(id) || !this.getArticleById(id)) return;
     this.viewed.add(id);
     this.act('viewArticle', { id });
   }

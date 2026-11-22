@@ -73,9 +73,11 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'author', label: 'عن المؤلف' },
   ];
 
+  // Close the mobile menu first, then navigate after the collapsed header has been
+  // laid out; scrolling while the menu is open lands ~280px past the section.
   const handleNavClick = (id: string) => {
-    onNavigate(id);
     setMobileMenuOpen(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => onNavigate(id)));
   };
 
   return (
@@ -96,10 +98,10 @@ export const Header: React.FC<HeaderProps> = ({
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold tracking-tight text-stone-900 leading-tight">
+              <span className="text-xl font-bold text-stone-900 leading-tight">
                 مدن الإنسان
               </span>
-              <span className="text-[11px] font-medium text-stone-500 tracking-wider">
+              <span className="text-xs font-medium text-stone-500 tracking-wider">
                 City for Human
               </span>
             </div>
@@ -135,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1.5 left-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#E84200] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
+                  <span className="absolute top-1.5 left-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#E84200] text-white text-xs font-bold flex items-center justify-center shadow-xs">
                     {unreadCount > 9 ? '+9' : unreadCount}
                   </span>
                 )}
@@ -173,8 +175,8 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-[#E2DAD0] py-2 z-50 text-right animate-in fade-in-50 zoom-in-95">
                     <div className="px-4 py-2 border-b border-[#F0EAE1]">
                       <p className="text-xs font-bold text-stone-900">{currentUser.name}</p>
-                      <p className="text-[11px] text-stone-500 mt-0.5">@{currentUser.username}</p>
-                      <span className="inline-block mt-1 text-[10px] font-semibold text-[#268F0C]">
+                      <p className="text-xs text-stone-500 mt-0.5">@{currentUser.username}</p>
+                      <span className="inline-block mt-1 text-xs font-semibold text-[#268F0C]">
                         {currentUser.role === 'admin'
                           ? 'المشرف العام (المدير)'
                           : currentUser.role === 'moderator'

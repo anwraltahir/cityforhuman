@@ -1,3 +1,4 @@
+import { useEscapeClose } from '../hooks/useEscapeClose';
 import React, { useEffect, useState } from 'react';
 import { X, BellRing, CheckCircle2, ChevronDown } from 'lucide-react';
 import { COUNTRIES, findCountry, normalizeNational, phoneError } from '../data/countries';
@@ -10,6 +11,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /** "Register your interest" form: saved on the server for launch announcements. */
 export const InterestModal: React.FC<InterestModalProps> = ({ onClose }) => {
+  useEscapeClose(onClose);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('');
@@ -76,10 +78,10 @@ export const InterestModal: React.FC<InterestModalProps> = ({ onClose }) => {
       bad ? 'border-red-400 focus:border-red-500' : 'border-[#DDD5C7] focus:border-[#268F0C]'
     }`;
   const label = 'block text-xs font-bold text-stone-700 mb-1';
-  const err = (k: string) => (errors[k] ? <p className="text-[11px] font-semibold text-red-600 mt-1">{errors[k]}</p> : null);
+  const err = (k: string) => (errors[k] ? <p className="text-xs font-semibold text-red-600 mt-1">{errors[k]}</p> : null);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs" onClick={onClose}>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="min-h-full flex items-center justify-center p-4">
         <div
           className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E0D8CB] text-right"
@@ -108,7 +110,7 @@ export const InterestModal: React.FC<InterestModalProps> = ({ onClose }) => {
           ) : (
             <form onSubmit={submit} noValidate className="p-6 sm:p-7 space-y-4">
               <div className="pl-8">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#E84200] bg-[#E84200]/10 px-2.5 py-1 rounded-full">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#E84200] bg-[#E84200]/10 px-2.5 py-1 rounded-full">
                   <BellRing className="w-3.5 h-3.5" />
                   قريباً في المكتبات
                 </span>
@@ -200,7 +202,7 @@ export const InterestModal: React.FC<InterestModalProps> = ({ onClose }) => {
                 {errors.phone ? (
                   err('phone')
                 ) : country ? (
-                  <p className="text-[11px] text-stone-400 mt-1">
+                  <p className="text-xs text-stone-400 mt-1">
                     اكتب رقمك بدون مفتاح الدولة ({country.min === country.max ? country.min : `${country.min}–${country.max}`} أرقام).
                   </p>
                 ) : null}

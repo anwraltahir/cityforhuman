@@ -37,7 +37,7 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({
   };
 
   return (
-    <div className="py-8 sm:py-12 bg-[#FAF8F5] min-h-screen text-right">
+    <div className="py-8 sm:py-12 bg-[#FAF8F5] min-h-svh text-right">
       <div className="max-w-3xl mx-auto px-3 sm:px-6 lg:px-8">
         {/* Back Button */}
         <button

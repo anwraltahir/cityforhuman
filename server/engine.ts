@@ -254,7 +254,7 @@ export class Engine {
     const username = str(body.username, 40, 'اسم المستخدم').toLowerCase();
     const email = str(body.email, 150, 'البريد الإلكتروني').toLowerCase();
     const password = String(body.password ?? '');
-    if (!/^[a-z0-9_.]{3,40}$/.test(username)) throw new ActionError('اسم المستخدم: حروف إنجليزية وأرقام و _ فقط (3 أحرف على الأقل)');
+    if (!/^[a-z0-9_]{3,40}$/.test(username)) throw new ActionError('اسم المستخدم: حروف إنجليزية صغيرة وأرقام و _ فقط (3 أحرف على الأقل)');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ActionError('البريد الإلكتروني غير صحيح');
     if (password.length < 8) throw new ActionError('كلمة المرور يجب ألا تقل عن 8 أحرف');
     if (this.db.users.some((u) => u.email.toLowerCase() === email)) throw new ActionError('البريد الإلكتروني مسجل بالفعل');

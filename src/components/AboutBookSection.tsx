@@ -36,7 +36,7 @@ export const AboutBookSection: React.FC<AboutBookSectionProps> = ({ onExploreCha
               <p className="text-xs text-stone-700 italic leading-relaxed">
                 «إن كتاب "مدن الإنسان" ليس مجرد دراسة في التخطيط العمراني، بل هو دعوة للتفكير في شكل الحياة الحضرية التي نريدها لأجيالنا القادمة.»
               </p>
-              <div className="flex items-center justify-between text-[11px] text-stone-500 font-semibold border-t border-[#F2ECE3] pt-2">
+              <div className="flex items-center justify-between text-xs text-stone-500 font-semibold border-t border-[#F2ECE3] pt-2">
                 <span>د. أمجد إبراهيم سلمان</span>
                 <span className="text-[#268F0C]">شهادة نقدية</span>
               </div>

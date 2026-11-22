@@ -1,3 +1,4 @@
+import { useEscapeClose } from '../hooks/useEscapeClose';
 import React, { useState } from 'react';
 import { X, BookOpen, Tablet, MapPin, Phone, ExternalLink, BellRing, Store } from 'lucide-react';
 import { BookAvailability, BookStore } from '../types';
@@ -10,6 +11,7 @@ interface GetBookModalProps {
 
 /** "Get the book": printed edition by country/bookstore, digital edition via store links. */
 export const GetBookModal: React.FC<GetBookModalProps> = ({ availability, onClose, onRegisterInterest }) => {
+  useEscapeClose(onClose);
   const { paper, digital } = availability;
   const [tab, setTab] = useState<'paper' | 'digital'>(paper.length || !digital.length ? 'paper' : 'digital');
 
@@ -44,14 +46,14 @@ export const GetBookModal: React.FC<GetBookModalProps> = ({ availability, onClos
     >
       <Icon className="w-4 h-4" />
       <span>{label}</span>
-      {count > 0 && <span className="text-[11px] text-[#268F0C] tabular-nums">({count})</span>}
+      {count > 0 && <span className="text-xs text-[#268F0C] tabular-nums">({count})</span>}
     </button>
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs" role="dialog" aria-modal="true" onClick={onClose}>
       <div
-        className="relative w-full max-w-lg max-h-[88vh] flex flex-col bg-white rounded-3xl shadow-2xl border border-[#E0D8CB] overflow-hidden text-right"
+        className="relative w-full max-w-lg max-h-[88dvh] flex flex-col bg-white rounded-3xl shadow-2xl border border-[#E0D8CB] overflow-hidden text-right"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 pt-6 pb-4 border-b border-[#F0EAE1]">

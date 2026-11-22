@@ -16,7 +16,7 @@ const arabicNumerals = ['٠١', '٠٢', '٠٣', '٠٤', '٠٥', '٠٦', '٠٧', 
 
 export const ChaptersGrid: React.FC<ChaptersGridProps> = ({ chapters, onSelectChapter }) => {
   return (
-    <section id="chapters" className="py-12 lg:py-20 min-h-[70vh] bg-[#F7F4EE]">
+    <section id="chapters" className="py-12 lg:py-20 min-h-[70dvh] bg-[#F7F4EE]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-right max-w-3xl mb-12 space-y-3">
@@ -24,7 +24,7 @@ export const ChaptersGrid: React.FC<ChaptersGridProps> = ({ chapters, onSelectCh
             <Layers className="w-4 h-4" />
             <span>فهرس الكتاب</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-stone-900">
             فصول كتاب «مدن الإنسان»
           </h1>
           <p className="text-stone-600 text-base sm:text-lg leading-relaxed">

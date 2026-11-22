@@ -21,6 +21,31 @@ const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   const app = express();
+  app.disable('x-powered-by');
+
+  // Security headers on every response (moved here from nginx so assets get them too)
+  const CSP = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self'",
+    "connect-src 'self'",
+    "frame-ancestors 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    'upgrade-insecure-requests',
+  ].join('; ');
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    if (isProduction) res.setHeader('Content-Security-Policy', CSP); // Vite dev server needs inline scripts
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
 
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
@@ -293,10 +318,19 @@ async function startServer() {
       return null;
     };
 
+    // Paths the app knows; anything else is a 404 (the app shows its "page not found" view)
+    const isKnownPath = (p: string) =>
+      /^\/(chapters(\/\d+)?|discussions\/[^/]+|articles\/[^/]+)?\/?$/.test(p);
+
     app.get('*', (req: Request, res: Response) => {
       res.setHeader('Cache-Control', 'no-cache');
+      // Unknown API routes get JSON, not the HTML shell
+      if (req.path.startsWith('/api/')) return res.status(404).json({ ok: false, error: 'غير موجود' });
       const meta = pageMeta(req.path);
-      if (!meta) return res.sendFile(INDEX_FILE);
+      if (!meta) {
+        const isDetail = /^\/(chapters\/\d+|discussions\/[^/]+|articles\/[^/]+)\/?$/.test(req.path);
+        return res.status(!isKnownPath(req.path) || isDetail ? 404 : 200).sendFile(INDEX_FILE);
+      }
 
       const site = 'مدن الإنسان – City for Human';
       const url = `https://cityforhuman.com${req.path}`;

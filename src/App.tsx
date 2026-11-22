@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { NotFound } from './components/NotFound';
 import React, { useState, useEffect } from 'react';
 import { User, Chapter, Discussion, Article } from './types';
 import { store } from './services/storage';
@@ -32,7 +33,7 @@ import { ReportModal } from './components/ReportModal';
 import { LegalModal } from './components/LegalModals';
 import { AdminDashboard } from './components/AdminDashboard';
 
-type ViewMode = 'main' | 'chapters' | 'chapter_detail' | 'discussion_detail' | 'article_detail';
+type ViewMode = 'main' | 'chapters' | 'chapter_detail' | 'discussion_detail' | 'article_detail' | 'not_found';
 interface Route {
   view: ViewMode;
   chapterId?: number;
@@ -46,8 +47,9 @@ const parseRoute = (pathname: string): Route => {
   if (parts[0] === 'discussions' && parts[1]) return { view: 'discussion_detail', discussionId: parts[1] };
   if (parts[0] === 'articles' && parts[1]) return { view: 'article_detail', articleId: parts[1] };
   if (parts[0] === 'chapters' && parts[1] && /^\d+$/.test(parts[1])) return { view: 'chapter_detail', chapterId: Number(parts[1]) };
-  if (parts[0] === 'chapters') return { view: 'chapters' };
-  return { view: 'main' };
+  if (parts[0] === 'chapters' && parts.length === 1) return { view: 'chapters' };
+  if (parts.length === 0) return { view: 'main' };
+  return { view: 'not_found' };
 };
 
 /** Page -> URL. */
@@ -56,6 +58,7 @@ const routePath = (r: Route): string => {
   if (r.view === 'article_detail' && r.articleId) return `/articles/${encodeURIComponent(r.articleId)}`;
   if (r.view === 'chapter_detail' && r.chapterId) return `/chapters/${r.chapterId}`;
   if (r.view === 'chapters') return '/chapters';
+  if (r.view === 'not_found') return window.location.pathname; // keep the unknown URL as typed
   return '/';
 };
 
@@ -99,6 +102,15 @@ function MainApp() {
     else if (viewMode === 'article_detail' && selectedArticleId) title = store.getArticleById(selectedArticleId)?.title || '';
     else if (viewMode === 'chapter_detail' && selectedChapterId) title = store.getChapterById(selectedChapterId)?.title || '';
     else if (viewMode === 'chapters') title = 'فصول الكتاب';
+    const missing =
+      viewMode === 'not_found' ||
+      (viewMode !== 'main' && viewMode !== 'chapters' && !title);
+    if (missing) {
+      const what =
+        viewMode === 'discussion_detail' ? 'النقاش' : viewMode === 'article_detail' ? 'المقال' : viewMode === 'chapter_detail' ? 'الفصل' : 'الصفحة';
+      document.title = `${what} غير موجود${what === 'الصفحة' ? 'ة' : ''} | مدن الإنسان`;
+      return;
+    }
     document.title = title ? `${title} | ${site}` : `${site} | مجتمع كتاب مدن الإنسان للكاتب عثمان الطيب`;
   }, [viewMode, selectedChapterId, selectedDiscussionId, selectedArticleId, discussions, articles, chapters]);
 
@@ -149,6 +161,18 @@ function MainApp() {
   }, []);
 
   // Navigation handlers
+  // Scroll once the section exists in the rendered page (after a view switch it
+  // appears a frame or two later). Sections carry scroll-margin-top for the header.
+  const scrollToSection = (id: string, tries = 0) => {
+    if (id === 'home') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else if (tries < 30) requestAnimationFrame(() => scrollToSection(id, tries + 1));
+  };
+
   const handleNavigateSection = (sectionId: string) => {
     setActiveNavSection(sectionId);
     // The chapters index is its own page, not a section of the home page
@@ -156,20 +180,8 @@ function MainApp() {
       setViewMode('chapters');
       return;
     }
-    if (viewMode !== 'main') {
-      setViewMode('main');
-      setTimeout(() => {
-        const el = document.getElementById(sectionId);
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    } else {
-      const el = document.getElementById(sectionId);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      } else if (sectionId === 'home') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }
+    if (viewMode !== 'main') setViewMode('main');
+    requestAnimationFrame(() => scrollToSection(sectionId));
   };
 
   // Open detail pages at the top. Runs after the new view has rendered, and jumps
@@ -234,7 +246,7 @@ function MainApp() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF8F5]" dir="rtl">
+      <div className="min-h-svh flex items-center justify-center bg-[#FAF8F5]" dir="rtl">
         <div className="flex flex-col items-center gap-3 text-stone-500">
           <div className="w-9 h-9 border-[3px] border-[#C1E2B9] border-t-[#268F0C] rounded-full animate-spin" />
           <span className="text-sm font-semibold">جارٍ تحميل مدن الإنسان…</span>
@@ -244,7 +256,7 @@ function MainApp() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-stone-900 selection:bg-[#C1E2B9] selection:text-[#194b10]">
+    <div className="min-h-svh flex flex-col bg-[#FAF8F5] text-stone-900 selection:bg-[#C1E2B9] selection:text-[#194b10]">
       {/* Universal Header */}
       <Header
         currentUser={currentUser}
@@ -288,6 +300,33 @@ function MainApp() {
 
         {viewMode === 'chapters' && <ChaptersGrid chapters={chapters} onSelectChapter={handleSelectChapter} />}
 
+        {viewMode === 'chapter_detail' && !selectedChapter && (
+          <NotFound
+            title="الفصل غير موجود"
+            message="لا يوجد فصل بهذا الرقم في كتاب «مدن الإنسان». تصفّح فهرس الفصول العشرة."
+            backLabel="العودة إلى فصول الكتاب"
+            onBack={() => handleNavigateSection('chapters')}
+          />
+        )}
+
+        {viewMode === 'article_detail' && !selectedArticle && (
+          <NotFound
+            title="المقال غير موجود"
+            message="لم يتم العثور على هذا المقال، ربما حُذف أو لم يُنشر بعد."
+            backLabel="العودة إلى مقالات القراء"
+            onBack={() => handleNavigateSection('articles')}
+          />
+        )}
+
+        {viewMode === 'not_found' && (
+          <NotFound
+            title="الصفحة غير موجودة"
+            message="الرابط الذي فتحته غير صحيح أو أن الصفحة لم تعد موجودة."
+            backLabel="العودة إلى الصفحة الرئيسية"
+            onBack={() => handleNavigateSection('home')}
+          />
+        )}
+
         {viewMode === 'chapter_detail' && selectedChapter && (
           <ChapterDetailView
             chapter={selectedChapter}
@@ -301,7 +340,7 @@ function MainApp() {
             discussionId={selectedDiscussionId}
             currentUser={currentUser}
             chapters={chapters}
-            onBack={() => setViewMode('main')}
+            onBack={() => handleNavigateSection('discussions')}
             onSelectChapter={handleSelectChapter}
             onOpenAuth={() => setAuthModal({ open: true, tab: 'login' })}
             onOpenShare={handleOpenShare}
@@ -312,7 +351,7 @@ function MainApp() {
         {viewMode === 'article_detail' && selectedArticle && (
           <ArticleDetailView
             article={selectedArticle}
-            onBack={() => setViewMode('main')}
+            onBack={() => handleNavigateSection('articles')}
             onOpenShare={handleOpenShare}
           />
         )}
@@ -331,6 +370,7 @@ function MainApp() {
           initialTab={authModal.tab}
           onClose={() => setAuthModal({ open: false, tab: 'login' })}
           onSuccess={() => setAuthModal({ open: false, tab: 'login' })}
+          onOpenLegal={(type) => setLegalModalType(type)}
         />
       )}
 
