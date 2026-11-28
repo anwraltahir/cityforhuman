@@ -83,9 +83,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in" role="dialog" aria-modal="true">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E0D8CB] overflow-hidden text-right">
+      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto sm:overflow-hidden sm:flex sm:flex-col bg-white rounded-3xl shadow-2xl border border-[#E0D8CB] text-right">
         {/* Header Profile Hero */}
-        <div className="relative p-6 bg-gradient-to-l from-[#FAF8F5] to-[#F2ECE3] border-b border-[#E3DBD0]">
+        <div className="relative shrink-0 p-6 bg-gradient-to-l from-[#FAF8F5] to-[#F2ECE3] border-b border-[#E3DBD0]">
           <button
             onClick={onClose}
             aria-label="إغلاق"
@@ -140,7 +140,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center justify-between px-6 pt-3 border-b border-[#F0EAE1] bg-white">
+        <div className="shrink-0 flex items-center justify-between px-6 pt-3 border-b border-[#F0EAE1] bg-white">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab('my_discussions')}
@@ -176,7 +176,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         </div>
 
         {/* Tab Body */}
-        <div className="p-6 max-h-[50dvh] overflow-y-auto">
+        <div className="p-6 sm:flex-1 sm:min-h-0 sm:overflow-y-auto">
           {activeTab === 'my_discussions' && (
             <div className="space-y-3">
               {myDiscussions.length === 0 ? (

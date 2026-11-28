@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { SITE_HOST } from '../siteConfig';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import React from 'react';
 import { X, ShieldCheck, FileText } from 'lucide-react';
@@ -45,7 +46,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({ type, onClose }) => {
           {isPrivacy ? (
             <>
               <p className="font-semibold text-stone-900">
-                أهلاً بكم في منصة «مدن الإنسان» (cityforhuman.com). نحن نحترم خصوصيتكم ونلتزم بحماية بياناتكم الشخصية.
+                أهلاً بكم في منصة «مدن الإنسان» ({SITE_HOST}). نحن نحترم خصوصيتكم ونلتزم بحماية بياناتكم الشخصية.
               </p>
               <h4 className="font-bold text-stone-900 pt-2">١. البيانات التي نجمعها</h4>
               <p>

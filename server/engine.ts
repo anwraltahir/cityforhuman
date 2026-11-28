@@ -290,7 +290,7 @@ export class Engine {
       (u) =>
         u.email.toLowerCase() === id ||
         u.username.toLowerCase() === id ||
-        (u.id === 'user_author_osman' && id === 'admin@cityforhuman.com')
+        (u.id === 'user_author_osman' && (id === 'admin@humancities.net' || id === 'admin@cityforhuman.com'))
     );
     const ok =
       !!user &&

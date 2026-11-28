@@ -43,6 +43,12 @@
   }
 }
 
+/* Scrolling inside a dialog never spills over to the page behind it (mobile swipe) */
+[role='dialog'],
+[role='dialog'] * {
+  overscroll-behavior: contain;
+}
+
 /* Long-form Arabic reading text (discussions, comments, chapters, articles).
    Larger size, medium weight and extra word/line spacing so Cairo does not feel cramped.
    No letter-spacing: it breaks the joins between Arabic letters. */

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { SITE_URL } from '../siteConfig';
 import { NotFound } from './NotFound';
 import React, { useState, useEffect } from 'react';
 import { Discussion, Chapter, Comment, User } from '../types';
@@ -476,7 +477,7 @@ export const DiscussionDetailView: React.FC<DiscussionDetailViewProps> = ({
                 onClick={() =>
                   onOpenShare(
                     discussion.title,
-                    `https://cityforhuman.com/discussions/${discussion.id}`
+                    `${SITE_URL}/discussions/${discussion.id}`
                   )
                 }
                 className="px-3.5 py-2 rounded-xl text-sm font-bold bg-[#FAF8F5] text-stone-700 hover:bg-[#F2ECE3] border border-[#DDD5C7] flex items-center gap-1.5 transition-all cursor-pointer"

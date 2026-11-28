@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { SITE_URL, SITE_HOST } from '../siteConfig';
 import React from 'react';
 import { UserCheck, BookOpen, Quote, Globe, Mail } from 'lucide-react';
 import { store } from '../services/storage';
@@ -80,13 +81,13 @@ export const AuthorSection: React.FC = () => {
             {/* Direct Official Links */}
             <div className="pt-4 border-t border-[#E8E2D6] flex flex-wrap items-center gap-6 text-xs font-semibold text-stone-600">
               <a
-                href="https://cityforhuman.com"
+                href={SITE_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1.5 hover:text-[#268F0C] transition-colors"
               >
                 <Globe className="w-4 h-4 text-[#268F0C]" />
-                <span>الموقع الرسمي: cityforhuman.com</span>
+                <span>الموقع الرسمي: {SITE_HOST}</span>
               </a>
 
               <a

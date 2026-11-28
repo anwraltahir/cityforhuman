@@ -17,6 +17,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const isProduction = process.env.NODE_ENV === 'production';
+// Primary public address (cityforhuman.com redirects here)
+const SITE_URL = process.env.SITE_URL || 'https://humancities.net';
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
@@ -56,7 +58,7 @@ async function startServer() {
       status: 'ok',
       platform: 'مدن الإنسان – City for Human',
       version: '1.0.0',
-      domain: 'cityforhuman.com',
+      domain: new URL(SITE_URL).host,
       timestamp: new Date().toISOString(),
     });
   });
@@ -271,7 +273,7 @@ async function startServer() {
       author: 'عثمان الطيب',
       chaptersCount: 10,
       description: 'كيف غيرت السيارات المدن؟ وماذا نفعل لتعود المدينة للإنسان؟',
-      officialSite: 'https://cityforhuman.com',
+      officialSite: SITE_URL,
     });
   });
 
@@ -333,11 +335,11 @@ async function startServer() {
       }
 
       const site = 'مدن الإنسان – City for Human';
-      const url = `https://cityforhuman.com${req.path}`;
+      const url = `${SITE_URL}${req.path}`;
       const title = esc(`${clip(meta.title, 90)} | ${site}`);
       const description = esc(clip(meta.description, 200));
       const image = meta.image
-        ? esc(meta.image.startsWith('/') ? `https://cityforhuman.com${meta.image}` : meta.image)
+        ? esc(meta.image.startsWith('/') ? `${SITE_URL}${meta.image}` : meta.image)
         : null;
 
       let html = fs.readFileSync(INDEX_FILE, 'utf8');

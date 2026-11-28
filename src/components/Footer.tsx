@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { SITE_URL } from '../siteConfig';
 import React from 'react';
 import { BookOpen, Globe, Mail, Heart, ShieldCheck, FileText } from 'lucide-react';
 import { store } from '../services/storage';
@@ -41,13 +42,13 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPrivacy, onOpe
 
             <div className="pt-2">
               <a
-                href="https://cityforhuman.com"
+                href={SITE_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="min-h-[44px] inline-flex items-center inline-flex items-center gap-2 text-xs font-semibold text-[#C1E2B9] hover:text-white transition-colors"
               >
                 <Globe className="w-3.5 h-3.5" />
-                <span>الموقع الرسمي: https://cityforhuman.com</span>
+                <span>الموقع الرسمي: {SITE_URL}</span>
               </a>
             </div>
           </div>

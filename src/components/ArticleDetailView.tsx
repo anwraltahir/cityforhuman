@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { SITE_URL } from '../siteConfig';
 import React, { useEffect } from 'react';
 import { store } from '../services/storage';
 import { Article } from '../types';
@@ -110,7 +111,7 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({
 
               <button
                 onClick={() =>
-                  onOpenShare(article.title, `https://cityforhuman.com/articles/${article.id}`)
+                  onOpenShare(article.title, `${SITE_URL}/articles/${article.id}`)
                 }
                 className="px-4 py-2 text-xs font-bold bg-white text-stone-800 border border-[#DDD5C7] rounded-xl hover:bg-[#F2ECE3] flex items-center gap-1.5 transition-colors cursor-pointer"
               >

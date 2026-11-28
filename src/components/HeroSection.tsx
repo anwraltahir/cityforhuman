@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { SITE_HOST } from '../siteConfig';
 import React, { useState } from 'react';
 import { BookOpen, MessageSquare, ArrowLeft, Compass, Users, BellRing, RotateCcw, ShoppingBag, CheckCircle2 } from 'lucide-react';
 import { InterestModal } from './InterestModal';
@@ -154,7 +155,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                     <span className="font-semibold text-stone-700 tabular-nums">ردمك: 978-9933-747-18-3</span>
                   </p>
                   <p>
-                    الموقع الرسمي: <strong className="text-stone-900 font-mono">cityforhuman.com</strong>
+                    الموقع الرسمي: <strong className="text-stone-900 font-mono">{SITE_HOST}</strong>
                   </p>
                 </div>
               </div>

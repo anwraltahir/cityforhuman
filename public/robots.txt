@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://cityforhuman.com/sitemap.xml
+Sitemap: https://humancities.net/sitemap.xml
